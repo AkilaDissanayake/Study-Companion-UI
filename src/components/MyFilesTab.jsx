@@ -7,8 +7,9 @@ import React from 'react';
 
 export default function MyFilesTab({
   searchQuery, setSearchQuery, isLoadingFiles, uploadedFiles,
-  expandedFolders, setExpandedFolders, handleDownload, fetchUserFiles
+  expandedFolders, setExpandedFolders, handleDownload,initiateDelete, fetchUserFiles
 }) {
+   
   return (
     <div style={{ maxWidth: '800px' }}>
       <h2>My Uploaded Files</h2>
@@ -69,9 +70,14 @@ export default function MyFilesTab({
                           </svg>
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.filename}</span>
                         </div>
-                        <button onClick={() => handleDownload(file.filename, file.subject)} style={{ padding: '4px 12px', fontSize: '0.8em', width: 'auto', flex: 'none', whiteSpace: 'nowrap', cursor: 'pointer' }}>
-                          Download
-                        </button>
+                        <div style={{display:'flex',gap:'8px'}}>
+                            <button onClick={() => handleDownload(file.filename, file.subject)} style={{ padding: '4px 12px', fontSize: '0.8em', width: 'auto', flex: 'none', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                                Download
+                            </button>
+                            <button onClick={() => initiateDelete(file.filename, file.subject)} style={{ padding: '4px 12px', fontSize: '0.8em', backgroundColor: '#dc3545', width:'auto',flex:'none',whiteSpace: 'nowrap',cursor: 'pointer'  }} >
+                                Delete
+                            </button>
+                        </div>
                       </li>
                     ))}
                   </ul>

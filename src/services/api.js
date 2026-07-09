@@ -148,3 +148,13 @@ export async function downloadFileBlob(filename, subject) {
   // The component will use this Blob to trigger the browser download.
   return res.blob();
 }
+
+export async function deleteFile(filename, subject) {
+  const url = `${API_BASE_URL}/files/delete`;
+  const res = await fetch(url, {
+    method: 'DELETE',
+    include: 'credentials',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename, subject })
+  })
+  return handleResponse(res)};

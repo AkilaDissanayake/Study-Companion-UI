@@ -9,11 +9,18 @@ import Topbar from '../components/Topbar';
 import UploadTab from '../components/UploadTab';
 import MyFilesTab from '../components/MyFilesTab';
 import SettingsTab from '../components/SettingsTab';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 export default function Dashboard(props) {
   return (
     <div className="dashboard-layout">
       {props.showPopup && <div className="popup-overlay"><div className="popup-card">✓ Login Successful!</div></div>}
+      <ConfirmDialog 
+        isOpen={props.isConfirmOpen} 
+        onClose={() => props.setIsConfirmOpen(false)} 
+        onConfirm={props.confirmDelete}
+        message={`Are you sure you want to delete ${props.fileToDelete?.filename}? This action cannot be undone.`}
+      />
 
       <Sidebar activeTab={props.activeTab} setActiveTab={props.setActiveTab} />
 
@@ -41,6 +48,9 @@ export default function Dashboard(props) {
               isLoadingFiles={props.isLoadingFiles} uploadedFiles={props.uploadedFiles}
               expandedFolders={props.expandedFolders} setExpandedFolders={props.setExpandedFolders} 
               handleDownload={props.handleDownload} fetchUserFiles={props.fetchUserFiles}
+              initiateDelete={props.initiateDelete} isConfirmOpen={props.isConfirmOpen}     
+              setIsConfirmOpen={props.setIsConfirmOpen}  fileToDelete={props.fileToDelete}           
+              confirmDelete={props.confirmDelete}
             />
           )}
           {/* No more userName, userId, or handleLogout props here either! */}

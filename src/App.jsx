@@ -34,6 +34,8 @@ function App() {
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedFolders, setExpandedFolders] = useState({});
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState(null);
 
   // 2. Watch for userId from Context. If it exists, user is logged in!
   useEffect(() => {
@@ -204,6 +206,29 @@ function App() {
       alert("Error downloading the file.");
     }
   };
+  const initiateDelete = (filename, subject) => {
+  setFileToDelete({ filename, subject });
+  setIsConfirmOpen(true);
+};
+  const confirmDelete = async () => {
+    setIsConfirmOpen(false);
+    if (fileToDelete) {
+    await handleRemove(fileToDelete.filename, fileToDelete.subject);
+    setFileToDelete(null);
+  }
+};
+  const handleRemove = async (filename, subject) => {
+
+    try {
+      await api.deleteFile(filename, subject);
+      // Refresh the list to remove the file from UI
+      await fetchUserFiles(); 
+      alert("File deleted successfully.");
+    } catch (error) {
+      console.error("Delete Error:", error);
+      alert("Error deleting the file. Please try again.");
+    }
+  };
 
   const applyTheme = (t) => document.documentElement.setAttribute('data-theme', t);
 
@@ -240,6 +265,9 @@ function App() {
         uploadedFiles={uploadedFiles} expandedFolders={expandedFolders}
         setExpandedFolders={setExpandedFolders} handleDownload={handleDownload}
         fetchUserFiles={fetchUserFiles}
+        initiateDelete={initiateDelete} isConfirmOpen={isConfirmOpen}     
+        setIsConfirmOpen={setIsConfirmOpen}  fileToDelete={fileToDelete}           
+        confirmDelete={confirmDelete}
       />
     );
   }
