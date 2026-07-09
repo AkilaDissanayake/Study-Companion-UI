@@ -1,0 +1,187 @@
+:root {
+  --bg-color: #ffffff;
+  --text-color: #333333;
+  --container-bg: #f8f9fa;
+  --sidebar-bg: #2c3e50;
+  --sidebar-text: #ffffff;
+  --border-color: #e9ecef;
+  --primary: #007bff;
+  --primary-hover: #0056b3;
+}
+
+[data-theme="dark"] {
+  --bg-color: #121212;
+  --text-color: #f4f4f4;
+  --container-bg: #1e1e1e;
+  --sidebar-bg: #1a1a1a;
+  --sidebar-text: #f4f4f4;
+  --border-color: #333333;
+  --primary: #375a7f;
+  --primary-hover: #2b4764;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  margin: 0;
+  height: 100vh;
+  display: flex;
+}
+
+/* Centered Card (For Login & Setup) */
+.center-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+}
+
+.card {
+  background-color: var(--container-bg);
+  padding: 30px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  width: 350px;
+  position: relative;
+}
+
+/* Dashboard Layout */
+.dashboard-layout {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 250px;
+  background-color: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar h2 {
+  text-align: center;
+  padding: 20px 0;
+  margin: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar li {
+  padding: 15px 20px;
+  cursor: pointer;
+  transition: background 0.2s;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.sidebar li:hover, .sidebar li.active {
+  background-color: rgba(255,255,255,0.15);
+  border-left: 4px solid #3498db;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-color);
+}
+
+.topbar {
+  height: 60px;
+  background-color: var(--container-bg);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0 20px;
+}
+
+/* Google-style Avatar */
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--primary);
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.content-area {
+  padding: 30px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Forms & Inputs */
+input[type="text"], select, button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 5px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  box-sizing: border-box;
+}
+
+button {
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+
+button:hover { background-color: var(--primary-hover); }
+
+/* Setup Window Close Button */
+.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  color: var(--text-color);
+  font-size: 20px;
+  width: auto;
+  padding: 0;
+  margin: 0;
+}
+.close-btn:hover { background: none; color: red; }
+
+/* Popup Overlay */
+.popup-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s;
+}
+.popup-card {
+  background-color: #28a745;
+  color: white;
+  padding: 20px 40px;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
