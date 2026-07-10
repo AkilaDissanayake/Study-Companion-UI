@@ -37,6 +37,7 @@ function App() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [fileToDelete, setFileToDelete] = useState(null);
   const [subjectToDelete, setSubjectToDelete] = useState(null);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // 2. Watch for userId from Context. If it exists, user is logged in!
   useEffect(() => {
@@ -289,6 +290,7 @@ function App() {
         setIsConfirmOpen={setIsConfirmOpen}  fileToDelete={fileToDelete}           
         confirmDelete={confirmDelete}   
         subjectToDelete={subjectToDelete}
+        isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed}
       />
     );
   }

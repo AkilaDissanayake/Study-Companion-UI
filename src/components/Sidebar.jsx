@@ -6,28 +6,39 @@
 
 import React from 'react';
 
-export default function Sidebar({ activeTab, setActiveTab }) {
+export default function Sidebar({ activeTab, setActiveTab, isCollapsed, setIsCollapsed }) {
   return (
-    <div className="sidebar">
-      <h2>Study Companion</h2>
+
+    <div className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
+      <div className="sidebar-header">
+        {!isCollapsed && <h2>Study Companion</h2>}
+        
+        <button 
+          className="toggle-btn" 
+          onClick={() => setIsCollapsed(!isCollapsed)}
+        >
+          {isCollapsed ? '☰' : '☰'} 
+        </button>
+</div>
+    
       <ul>
         <li 
           className={activeTab === 'upload' ? 'active' : ''} 
           onClick={() => setActiveTab('upload')}
         >
-          File Upload
+          {!isCollapsed && 'File Upload'}
         </li>
         <li 
           className={activeTab === 'files' ? 'active' : ''} 
           onClick={() => setActiveTab('files')}
         >
-          My Files
+          {!isCollapsed && 'My Files'}
         </li>
         <li 
           className={activeTab === 'settings' ? 'active' : ''} 
           onClick={() => setActiveTab('settings')}
         >
-          Settings
+          {!isCollapsed && 'Settings'}
         </li>
       </ul>
     </div>

@@ -56,21 +56,38 @@ body {
   height: 100vh;
 }
 
+/* Sidebar & Collapse Animations */
 .sidebar {
   width: 250px;
   background-color: var(--sidebar-bg);
   color: var(--sidebar-text);
   display: flex;
   flex-direction: column;
+  transition: width 0.3s ease; /* Animates the width change */
+  overflow: hidden; /* Hides text that overflows when shrinking */
+}
+
+/* The state applied when isCollapsed is true */
+.sidebar.collapsed {
+  width: 60px; /* Shrinks the background and container */
 }
 
 .sidebar h2 {
   text-align: center;
   padding: 20px 0;
   margin: 0;
+  white-space: nowrap; /* Prevents title wrapping during animation */
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
   border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
+/* Sidebar List */
 .sidebar ul {
   list-style: none;
   padding: 0;
@@ -82,6 +99,7 @@ body {
   cursor: pointer;
   transition: background 0.2s;
   border-bottom: 1px solid rgba(255,255,255,0.05);
+  white-space: nowrap; /* Keeps text on one line while shrinking */
 }
 
 .sidebar li:hover, .sidebar li.active {
@@ -164,6 +182,25 @@ button:hover { background-color: var(--primary-hover); }
 }
 .close-btn:hover { background: none; color: red; }
 
+/* Fixed Toggle Button for Sidebar */
+.toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
+  color: var(--sidebar-text); /* Matches sidebar text instead of being dark grey */
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto; /* Overrides the 100% width on global buttons */
+  margin: 0; /* Overrides global button margin */
+}
+
+.toggle-btn:hover {
+  background-color: rgba(255,255,255,0.1); /* Subtle hover effect */
+}
+
 /* Popup Overlay */
 .popup-overlay {
   position: fixed;
@@ -175,6 +212,7 @@ button:hover { background-color: var(--primary-hover); }
   z-index: 1000;
   animation: fadeIn 0.3s;
 }
+
 .popup-card {
   background-color: #28a745;
   color: white;
@@ -184,4 +222,5 @@ button:hover { background-color: var(--primary-hover); }
   font-weight: bold;
   box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
+
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

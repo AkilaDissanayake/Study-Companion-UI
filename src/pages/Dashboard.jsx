@@ -22,7 +22,7 @@ export default function Dashboard(props) {
         message={`Are you sure you want to delete ${props.fileToDelete?.filename || props.subjectToDelete}? This action cannot be undone.`}
       />
 
-      <Sidebar activeTab={props.activeTab} setActiveTab={props.setActiveTab} />
+      <Sidebar activeTab={props.activeTab} setActiveTab={props.setActiveTab} isCollapsed={props.isCollapsed} setIsCollapsed={props.setIsCollapsed} />
 
       <div className="main-content">
         {/* Look how clean this is now! No more userName or handleLogout props */}
