@@ -153,8 +153,19 @@ export async function deleteFile(filename, subject) {
   const url = `${API_BASE_URL}/files/delete`;
   const res = await fetch(url, {
     method: 'DELETE',
-    include: 'credentials',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ filename, subject })
   })
   return handleResponse(res)};
+
+export async function deleteSubject(subject) {
+    const url = `${API_BASE_URL}/files/deletesubject`;
+    const res = await fetch(url, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject })
+    });
+    return handleResponse(res);
+}

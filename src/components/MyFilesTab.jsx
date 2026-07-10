@@ -48,17 +48,48 @@ export default function MyFilesTab({
             ).map(([subject, files]) => (
               <div key={subject} style={{ marginBottom: '10px' }}>
                 <div 
-                  onClick={() => setExpandedFolders(prev => ({...prev, [subject]: !prev[subject]}))}
-                  style={{ backgroundColor: 'var(--border-color)', padding: '12px', borderRadius: '4px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 'bold' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#007bff', marginRight: '8px', flexShrink: 0 }}>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                    </svg>
-                    <span>{subject}</span>
-                  </div>
-                  <span>{files.length} file{files.length !== 1 && 's'} {expandedFolders[subject] ? '▼' : '▶'}</span>
-                </div>
+                    onClick={() => setExpandedFolders(prev => ({...prev, [subject]: !prev[subject]}))}
+                    style={{ 
+                        backgroundColor: 'var(--border-color)', 
+                        padding: '12px', 
+                        borderRadius: '4px', 
+                        cursor: 'pointer', 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        fontWeight: 'bold' 
+                    }}
+                    >
+                    {/* LEFT SIDE: Icon and Subject */}
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#007bff', marginRight: '8px', flexShrink: 0 }}>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                        </svg>
+                        <span>{subject}</span>
+                    </div>
+
+                    {/* RIGHT SIDE: Delete Button and File Count */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <button 
+                        onClick={(e) => { 
+                            e.stopPropagation(); 
+                            initiateDelete(null, subject); 
+                        }} 
+                        style={{ 
+                            padding: '4px 12px', 
+                            fontSize: '0.8em', 
+                            backgroundColor: '#dc3545', 
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer' 
+                        }}
+                        >
+                        Delete
+                        </button>
+                        <span>{files.length} file{files.length !== 1 && 's'} {expandedFolders[subject] ? '▼' : '▶'}</span>
+                    </div>
+                    </div>
 
                 {expandedFolders[subject] && (
                   <ul style={{ listStyleType: 'none', padding: '10px', margin: 0, border: '1px solid var(--border-color)', borderTop: 'none', borderRadius: '0 0 4px 4px' }}>

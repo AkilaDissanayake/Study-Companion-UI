@@ -36,6 +36,7 @@ function App() {
   const [expandedFolders, setExpandedFolders] = useState({});
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [fileToDelete, setFileToDelete] = useState(null);
+  const [subjectToDelete, setSubjectToDelete] = useState(null);
 
   // 2. Watch for userId from Context. If it exists, user is logged in!
   useEffect(() => {
@@ -207,8 +208,13 @@ function App() {
     }
   };
   const initiateDelete = (filename, subject) => {
-  setFileToDelete({ filename, subject });
-  setIsConfirmOpen(true);
+    if (filename){  
+      setFileToDelete({ filename, subject });
+      setIsConfirmOpen(true);}
+    else {
+      setSubjectToDelete(subject);
+      setIsConfirmOpen(true);
+    }
 };
   const confirmDelete = async () => {
     setIsConfirmOpen(false);
@@ -216,6 +222,10 @@ function App() {
     await handleRemove(fileToDelete.filename, fileToDelete.subject);
     setFileToDelete(null);
   }
+    else if (subjectToDelete) {
+      await handleRemoveSubject(subjectToDelete);
+      setSubjectToDelete(null);
+    }
 };
   const handleRemove = async (filename, subject) => {
 
@@ -223,13 +233,23 @@ function App() {
       await api.deleteFile(filename, subject);
       // Refresh the list to remove the file from UI
       await fetchUserFiles(); 
-      alert("File deleted successfully.");
     } catch (error) {
       console.error("Delete Error:", error);
       alert("Error deleting the file. Please try again.");
     }
   };
 
+  const handleRemoveSubject = async (subject) => {
+    try {
+      await api.deleteSubject(subject);
+      // Refresh the subjects list
+      await fetchSubjects();
+      
+    } catch (error) {
+      console.error("Delete Subject Error:", error);
+      alert("Error deleting the subject. Please try again.");
+    }
+  };
   const applyTheme = (t) => document.documentElement.setAttribute('data-theme', t);
 
   // 4. Prevent the app from flashing the login screen while checking session
@@ -267,10 +287,12 @@ function App() {
         fetchUserFiles={fetchUserFiles}
         initiateDelete={initiateDelete} isConfirmOpen={isConfirmOpen}     
         setIsConfirmOpen={setIsConfirmOpen}  fileToDelete={fileToDelete}           
-        confirmDelete={confirmDelete}
+        confirmDelete={confirmDelete}   
+        subjectToDelete={subjectToDelete}
       />
     );
   }
 }
+
 
 export default App;

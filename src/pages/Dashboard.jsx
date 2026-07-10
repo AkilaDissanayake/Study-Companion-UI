@@ -19,7 +19,7 @@ export default function Dashboard(props) {
         isOpen={props.isConfirmOpen} 
         onClose={() => props.setIsConfirmOpen(false)} 
         onConfirm={props.confirmDelete}
-        message={`Are you sure you want to delete ${props.fileToDelete?.filename}? This action cannot be undone.`}
+        message={`Are you sure you want to delete ${props.fileToDelete?.filename || props.subjectToDelete}? This action cannot be undone.`}
       />
 
       <Sidebar activeTab={props.activeTab} setActiveTab={props.setActiveTab} />
@@ -50,7 +50,7 @@ export default function Dashboard(props) {
               handleDownload={props.handleDownload} fetchUserFiles={props.fetchUserFiles}
               initiateDelete={props.initiateDelete} isConfirmOpen={props.isConfirmOpen}     
               setIsConfirmOpen={props.setIsConfirmOpen}  fileToDelete={props.fileToDelete}           
-              confirmDelete={props.confirmDelete}
+              confirmDelete={props.confirmDelete}  subjectToDelete={props.subjectToDelete}
             />
           )}
           {/* No more userName, userId, or handleLogout props here either! */}
