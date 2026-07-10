@@ -244,7 +244,9 @@ function App() {
     try {
       await api.deleteSubject(subject);
       // Refresh the subjects list
+      await fetchUserFiles(); // Refresh the files list to remove files under the deleted subject do first for user experience
       await fetchSubjects();
+      
       
     } catch (error) {
       console.error("Delete Subject Error:", error);
