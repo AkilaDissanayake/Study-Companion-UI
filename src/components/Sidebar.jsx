@@ -22,12 +22,7 @@ export default function Sidebar({ activeTab, setActiveTab, isCollapsed, setIsCol
 </div>
     
       <ul>
-        <li 
-          className={activeTab === 'upload' ? 'active' : ''} 
-          onClick={() => setActiveTab('upload')}
-        >
-          {!isCollapsed && 'File Upload'}
-        </li>
+        
         <li 
           className={activeTab === 'files' ? 'active' : ''} 
           onClick={() => setActiveTab('files')}

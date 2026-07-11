@@ -6,8 +6,7 @@
 import React from 'react';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
-import UploadTab from '../components/UploadTab';
-import MyFilesTab from '../components/MyFilesTab';
+import FileManagerTab from '../components/FileManagerTab'; // Import the new component
 import SettingsTab from '../components/SettingsTab';
 import ConfirmDialog from '../components/ConfirmDialog';
 
@@ -25,37 +24,33 @@ export default function Dashboard(props) {
       <Sidebar activeTab={props.activeTab} setActiveTab={props.setActiveTab} isCollapsed={props.isCollapsed} setIsCollapsed={props.setIsCollapsed} />
 
       <div className="main-content">
-        {/* Look how clean this is now! No more userName or handleLogout props */}
         <Topbar 
           showProfileMenu={props.showProfileMenu} 
           setShowProfileMenu={props.setShowProfileMenu} 
         />
 
         <div className="content-area">
-          {props.activeTab === 'upload' && (
-            <UploadTab 
+          {/* Render the combined File Manager Tab */}
+          {props.activeTab === 'files' && (
+            <FileManagerTab 
+              // Upload Props
               isAddingSubject={props.isAddingSubject} selectedSubject={props.selectedSubject} 
               handleSubjectChange={props.handleSubjectChange} subjects={props.subjects}
               newSubject={props.newSubject} setNewSubject={props.setNewSubject} 
               setSelectedFiles={props.setSelectedFiles} setUploadStatus={props.setUploadStatus}
               handleFileUpload={props.handleFileUpload} uploadStatus={props.uploadStatus} 
-            />
-          )}
-
-          {props.activeTab === 'files' && (
-            <MyFilesTab 
+              // File Viewer Props
               searchQuery={props.searchQuery} setSearchQuery={props.setSearchQuery} 
               isLoadingFiles={props.isLoadingFiles} uploadedFiles={props.uploadedFiles}
               expandedFolders={props.expandedFolders} setExpandedFolders={props.setExpandedFolders} 
               handleDownload={props.handleDownload} fetchUserFiles={props.fetchUserFiles}
               initiateDelete={props.initiateDelete} isConfirmOpen={props.isConfirmOpen}     
-              setIsConfirmOpen={props.setIsConfirmOpen}  fileToDelete={props.fileToDelete}           
-              confirmDelete={props.confirmDelete}  subjectToDelete={props.subjectToDelete}
+              setIsConfirmOpen={props.setIsConfirmOpen} fileToDelete={props.fileToDelete}           
+              confirmDelete={props.confirmDelete} subjectToDelete={props.subjectToDelete}
             />
           )}
-          {/* No more userName, userId, or handleLogout props here either! */}
+          
           {props.activeTab === 'settings' && (
-            
             <SettingsTab 
               theme={props.theme} setTheme={props.setTheme} 
               language={props.language} setLanguage={props.setLanguage} 

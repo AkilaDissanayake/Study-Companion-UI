@@ -16,7 +16,7 @@ function App() {
 
   // Application State
   const [view, setView] = useState('login'); 
-  const [activeTab, setActiveTab] = useState('upload'); 
+  const [activeTab, setActiveTab] = useState('files'); 
   const [showPopup, setShowPopup] = useState(false);
   const [config, setConfig] = useState({});
   
@@ -74,8 +74,11 @@ function App() {
   };
 
   useEffect(() => {
-    if (userId && activeTab === 'upload') fetchSubjects();
-  }, [userId, activeTab]);
+      if (userId && activeTab === 'files') {
+        fetchSubjects();
+        fetchUserFiles();
+      }
+    }, [userId, activeTab]);
 
   const handleGoogleSuccess = async (credentialResponse) => {
     const googleToken = credentialResponse.credential;
