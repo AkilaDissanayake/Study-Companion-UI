@@ -47,6 +47,7 @@ export default function Dashboard(props) {
               initiateDelete={props.initiateDelete} isConfirmOpen={props.isConfirmOpen}     
               setIsConfirmOpen={props.setIsConfirmOpen} fileToDelete={props.fileToDelete}           
               confirmDelete={props.confirmDelete} subjectToDelete={props.subjectToDelete}
+              handleGetFileUrl={props.handleGetFileUrl}
             />
           )}
           

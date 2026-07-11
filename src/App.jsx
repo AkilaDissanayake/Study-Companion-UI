@@ -211,6 +211,17 @@ function App() {
       alert("Error downloading the file.");
     }
   };
+
+  const handleGetFileUrl = async (filename, subject) => {
+    try {
+      const blob = await api.downloadFileBlob(filename, subject);
+      return window.URL.createObjectURL(blob);
+    } catch (error) {
+      console.error("View Error:", error);
+      alert("Error loading the file for preview.");
+      return null;
+    }
+  };
   const initiateDelete = (filename, subject) => {
     if (filename){  
       setFileToDelete({ filename, subject });
@@ -296,6 +307,7 @@ function App() {
         confirmDelete={confirmDelete}   
         subjectToDelete={subjectToDelete}
         isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed}
+        handleGetFileUrl={handleGetFileUrl}
       />
     );
   }
