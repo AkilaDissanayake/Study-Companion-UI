@@ -110,13 +110,43 @@ export default function FileManagerTab({
       {/* --- FILES VIEWER SECTION --- */}
       <div style={{ backgroundColor: 'var(--container-bg)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
         
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{ margin: 0 }}>My Files</h3>
-            <button onClick={fetchUserFiles} style={{ backgroundColor: '#6c757d', padding: '6px 12px', fontSize: '0.9em', cursor: 'pointer', color: 'white', border: 'none', borderRadius: '4px' }}>
+                <div style={{ 
+            display: 'flex',
+            flexDirection: 'row',     /* Forces items to stay side-by-side */
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            marginBottom: '20px',
+            width: '100%',
+            boxSizing: 'border-box',
+            gap: '15px'               /* Adds a safe buffer between the title and the button */
+        }}>
+            <h3 style={{ 
+                margin: 0, 
+                whiteSpace: 'nowrap', /* FIX 1: Absolutely forces "My Files" to stay on ONE line */
+                flexShrink: 0         /* Prevents the title from ever being squished */
+            }}>
+                My Files
+            </h3>
+            
+            <button 
+                onClick={fetchUserFiles} 
+                style={{ 
+                    
+                    padding: '6px 12px', 
+                    fontSize: '0.9em', 
+                    cursor: 'pointer', 
+                    color: 'white', 
+                    border: 'none', 
+                    borderRadius: '4px',
+                    margin: 0,
+                    width: 'auto',        /* FIX 2: Overrides any global CSS making the button 100% wide */
+                    whiteSpace: 'nowrap', /* Keeps button text on one line */
+                    flexShrink: 0         /* Prevents the button from being squished */
+                }}
+            >
                 Refresh List
             </button>
         </div>
-
         {/* Search Bar */}
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px', borderRadius: '4px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-color)', padding: '0 12px' }}>
           <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#888', marginRight: '8px', flexShrink: 0 }}>

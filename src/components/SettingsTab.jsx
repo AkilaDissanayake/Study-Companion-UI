@@ -31,8 +31,8 @@ export default function SettingsTab({
         <label style={{ fontWeight: 'bold', display: 'block' }}>Language:</label>
         <select value={language} onChange={(e) => setLanguage(e.target.value)}>
           <option value="english">English</option>
-          <option value="spanish">Spanish</option>
-          <option value="french">French</option>
+          <option value="spanish">Sinhala</option>
+          <option value="french">Tamil</option>
         </select>
         
         <button onClick={() => { handleSavePreferences(false); alert("Settings updated successfully!"); }} style={{ backgroundColor: 'var(--primary)', marginTop: '20px' }}>
