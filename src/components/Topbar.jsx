@@ -13,7 +13,7 @@ export default function Topbar({ showProfileMenu, setShowProfileMenu }) {
   // 1. Create a reference to the dropdown container
   const menuRef = useRef(null); 
 
-  // 2. Set up the click listener
+  // 2. Set up the click listener for closing the menu
   useEffect(() => {
     function handleClickOutside(event) {
       // If the menu is open AND the click happened outside the menuRef container...
@@ -29,12 +29,12 @@ export default function Topbar({ showProfileMenu, setShowProfileMenu }) {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [setShowProfileMenu]); // Only re-run if this function changes
+  }, [setShowProfileMenu]); 
 
   return (
     <div className="topbar">
-      {/* 3. Attach the ref to this relative wrapper */}
-      <div style={{ position: "relative" }} ref={menuRef}>
+      {/* 3. zIndex: 999 keeps the menu above the ChatTab background */}
+      <div style={{ position: "relative", zIndex: 999 }} ref={menuRef}>
         
         <div 
           className="avatar" 
@@ -45,9 +45,31 @@ export default function Topbar({ showProfileMenu, setShowProfileMenu }) {
             {userName ? userName.charAt(0).toUpperCase() : 'U'}
         </div>
 
+        {/* 4. Dropdown Menu styled to anchor to the right edge */}
         {showProfileMenu && (
-          <div className="dropdown-menu" >
-            <p>{userName}</p>
+          <div 
+            className="dropdown-menu" 
+            style={{
+              position: 'absolute',
+              right: 0,             // Anchors to the right side to prevent off-screen overflow
+              top: '100%',          // Starts exactly at the bottom of the avatar container
+              marginTop: '12px',    // Adds a nice visual gap below the avatar
+              minWidth: '160px',    // Gives enough width for the user's name
+              backgroundColor: 'var(--container-bg)', // Adapts to light/dark themes
+              border: '1px solid var(--border-color)',
+              borderRadius: '8px',
+              padding: '12px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+            }}
+          >
+            <p style={{ 
+              margin: '0 0 10px 0', 
+              textAlign: 'center', 
+              fontWeight: 'bold',
+              color: 'var(--text-color)' 
+            }}>
+              {userName}
+            </p>
             <button 
               onClick={logout} 
               style={{ 
@@ -56,8 +78,13 @@ export default function Topbar({ showProfileMenu, setShowProfileMenu }) {
                 width: '100%', 
                 padding: '8px 0', 
                 border: 'none', 
-                cursor: 'pointer' 
+                cursor: 'pointer',
+                borderRadius: '4px',
+                fontWeight: 'bold',
+                transition: 'background-color 0.2s'
               }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#c82333'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#dc3545'}
             >
               Sign Out
             </button>
