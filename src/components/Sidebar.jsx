@@ -22,7 +22,12 @@ export default function Sidebar({ activeTab, setActiveTab, isCollapsed, setIsCol
 </div>
     
       <ul>
-        
+        <li 
+          className={`p-2 rounded cursor-pointer transition-colors ${activeTab === 'chat' ? 'bg-blue-600' : 'hover:bg-gray-800'}`} 
+          onClick={() => setActiveTab('chat')}
+        >
+          AI Tutor
+        </li>
         <li 
           className={activeTab === 'files' ? 'active' : ''} 
           onClick={() => setActiveTab('files')}

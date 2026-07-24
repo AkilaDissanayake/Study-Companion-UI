@@ -222,5 +222,20 @@ button:hover { background-color: var(--primary-hover); }
   font-weight: bold;
   box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
+.content-area {
+  flex: 1; /* Takes up all space under the Topbar */
+  padding: 20px;
+  overflow-y: auto; /* Handles standard scrolling for other tabs */
+  
+  /* CRITICAL ADDITIONS FOR CHAT LAYOUT: */
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
 
+.content-area.chat-active {
+  overflow: hidden !important; 
+  padding: 0 !important; /* Remove padding so the chat goes edge-to-edge */
+}
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

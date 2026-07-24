@@ -85,24 +85,27 @@ function App() {
     const decodedName = decodeJwt(googleToken).name || "User";
 
     try {
-      const data = await api.loginWithGoogle(googleToken);
+      const response = await api.loginWithGoogle(googleToken);
       
-      // 3. Tell the Context the user has logged in!
-      login(data.user_id, decodedName);
+      // CHANGE 1: We must extract the payload from response.data!
+      const payload = response.data; 
       
-      setConfig(data.config);
-      if (data.config) {
-          setTheme(data.config.theme || 'light');
-          setLanguage(data.config.language || 'english');
+      // CHANGE 2: Use the payload variable below instead of data
+      login(payload.user_id, decodedName);
+      
+      setConfig(payload.config);
+      if (payload.config) {
+          setTheme(payload.config.theme || 'light');
+          setLanguage(payload.config.language || 'english');
       }
 
       setShowPopup(true);
       setTimeout(() => setShowPopup(false), 2000); 
 
-      if (!data.config.language) {
+      if (!payload.config.language) {
         setView('setup');
       } else {
-        applyTheme(data.config.theme || 'light');
+        applyTheme(payload.config.theme || 'light');
         setView('dashboard');
       }
     } catch (error) {

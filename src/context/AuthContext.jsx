@@ -23,6 +23,7 @@ export function AuthProvider({ children }) {
         const data = await api.checkAuthSession();
         setUserId(data.user_id);
       } catch (err) {
+
         console.log("No active session found.");
       } finally {
         setIsLoading(false);

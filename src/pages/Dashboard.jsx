@@ -9,6 +9,7 @@ import Topbar from '../components/Topbar';
 import FileManagerTab from '../components/FileManagerTab'; // Import the new component
 import SettingsTab from '../components/SettingsTab';
 import ConfirmDialog from '../components/ConfirmDialog';
+import ChatTab from '../components/ChatTab';
 
 export default function Dashboard(props) {
   return (
@@ -29,7 +30,13 @@ export default function Dashboard(props) {
           setShowProfileMenu={props.setShowProfileMenu} 
         />
 
-        <div className="content-area">
+        <div className={`content-area ${props.activeTab === 'chat' ? 'chat-active' : ''}`}>
+
+          {/* Render the Chat Tab */}
+          {props.activeTab === 'chat' && (
+            <ChatTab />
+          )}
+          
           {/* Render the combined File Manager Tab */}
           {props.activeTab === 'files' && (
             <FileManagerTab 

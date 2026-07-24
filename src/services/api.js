@@ -169,3 +169,23 @@ export async function deleteSubject(subject) {
     });
     return handleResponse(res);
 }
+
+
+// ==========================================
+// CHAT API
+// ==========================================
+/**
+ * Sends a raw question to the LangGraph backend and retrieves the AI's response.
+ * @param {string} raw_question - The student's question.
+ * @param {string} chat_history - Optional context.
+ */
+export async function sendChatMessage(raw_question, chat_history = "") {
+  const url = `${API_BASE_URL}/chat`;
+  const res = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ raw_question, chat_history })
+  });
+  return handleResponse(res);
+}
