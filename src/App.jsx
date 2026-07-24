@@ -12,7 +12,7 @@ function decodeJwt(token) {
 
 function App() {
   // 1. Grab auth tools from Context
-  const { userId, isLoading, login } = useAuth();
+  const { userId, userName, isLoading, login } = useAuth();
 
   // Application State
   const [view, setView] = useState('login'); 
@@ -38,6 +38,7 @@ function App() {
   const [fileToDelete, setFileToDelete] = useState(null);
   const [subjectToDelete, setSubjectToDelete] = useState(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  
 
   // 2. Watch for userId from Context. If it exists, user is logged in!
   useEffect(() => {
@@ -292,6 +293,7 @@ function App() {
   if (view === 'dashboard') {
     return (
       <Dashboard 
+        userName={userName}
         showPopup={showPopup} activeTab={activeTab} setActiveTab={setActiveTab}
         showProfileMenu={showProfileMenu} setShowProfileMenu={setShowProfileMenu}
         theme={theme} setTheme={setTheme} language={language} setLanguage={setLanguage}

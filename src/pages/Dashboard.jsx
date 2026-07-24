@@ -34,7 +34,7 @@ export default function Dashboard(props) {
 
           {/* Render the Chat Tab */}
           {props.activeTab === 'chat' && (
-            <ChatTab />
+            <ChatTab userName={props.userName} />
           )}
           
           {/* Render the combined File Manager Tab */}
