@@ -175,17 +175,38 @@ export async function deleteSubject(subject) {
 // CHAT API
 // ==========================================
 /**
- * Sends a raw question to the LangGraph backend and retrieves the AI's response.
+ * Sends a raw question to the backend and retrieves the AI's response.
  * @param {string} raw_question - The student's question.
- * @param {string} chat_history - Optional context.
+ * @param {string|null} session_id - The active chat session ID. Null creates a new chat.
  */
-export async function sendChatMessage(raw_question, chat_history = "") {
+export async function sendChatMessage(raw_question, session_id = null) {
   const url = `${API_BASE_URL}/chat`;
   const res = await fetch(url, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ raw_question, chat_history })
+    // Send session_id instead of chat_history!
+    body: JSON.stringify({ raw_question, session_id }) 
+  });
+  return handleResponse(res);
+}
+
+// Fetch the list of chats for the sidebar
+export async function getSidebarChats() {
+  const url = `${API_BASE_URL}/chats`;
+  const res = await fetch(url, {
+    method: 'GET',
+    credentials: 'include'
+  });
+  return handleResponse(res);
+}
+
+// Fetch the full history when a chat is clicked
+export async function getChatHistory(sessionId) {
+  const url = `${API_BASE_URL}/chats/${sessionId}`;
+  const res = await fetch(url, {
+    method: 'GET',
+    credentials: 'include'
   });
   return handleResponse(res);
 }

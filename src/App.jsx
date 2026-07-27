@@ -19,7 +19,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('files'); 
   const [showPopup, setShowPopup] = useState(false);
   const [config, setConfig] = useState({});
-  
+  const [activeSessionId, setActiveSessionId] = useState(null);
   // UI States
   const [theme, setTheme] = useState('light');
   const [language, setLanguage] = useState('english');
@@ -313,6 +313,8 @@ function App() {
         subjectToDelete={subjectToDelete}
         isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed}
         handleGetFileUrl={handleGetFileUrl}
+        activeSessionId={activeSessionId} 
+        setActiveSessionId={setActiveSessionId}
       />
     );
   }

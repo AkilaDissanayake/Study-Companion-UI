@@ -1,15 +1,35 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ChatMessage from './ChatMessage';
-import { sendChatMessage } from '../services/api';
-
-export default function ChatTab({ userName }) {
+import { sendChatMessage, getChatHistory } from '../services/api';
+export default function ChatTab({ userName , activeSessionId, setActiveSessionId }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
+  const [sessionId, setSessionId] = useState(activeSessionId || null)
   const messagesEndRef = useRef(null);
-  const textareaRef = useRef(null); // Reference to control the textarea height
+  const textareaRef = useRef(null); 
 
+  // Add this inside ChatTab.jsx
+useEffect(() => {
+    const loadSelectedChat = async () => {
+        if (!activeSessionId) return; // If null, it's a new chat, do nothing
+        
+        setIsLoading(true);
+        try {
+            const response = await getChatHistory(activeSessionId);
+            // Assuming your backend JSONB maps perfectly to your frontend message format
+            if (response.data && response.data.chat_state) {
+                setMessages(response.data.chat_state);
+            }
+        } catch (error) {
+            console.error("Failed to load chat history:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    loadSelectedChat();
+}, [activeSessionId]); // This runs every time the user clicks a different chat in the sidebar
   // Auto-scroll to bottom only when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -22,6 +42,11 @@ export default function ChatTab({ userName }) {
     return "Good evening";
   };
 
+  // --- NEW: Reset the chat state to start fresh ---
+  const handleNewChat = () => {
+    setSessionId(null);
+    setMessages([]);
+  };
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -33,15 +58,21 @@ export default function ChatTab({ userName }) {
     setInput("");
     setIsLoading(true);
 
-    // Reset textarea height back to a single line after sending
     if (textareaRef.current) {
       textareaRef.current.style.height = '54px';
     }
 
     try {
-      const response = await sendChatMessage(userMsg.text);
+      // --- UPDATED: Pass the sessionId to the backend ---
+      const response = await sendChatMessage(userMsg.text, sessionId);
+      
       if (response.status === "success") {
         setMessages(prev => [...prev, { id: `bot-${Date.now()}`, role: "bot", text: response.data.response }]);
+        
+        // --- NEW: Save the session ID if the backend just created a new chat ---
+        if (!sessionId && response.data.session_id) {
+          setSessionId(response.data.session_id);
+        }
       }
     } catch (error) {
       console.error("Chat Error:", error);
@@ -58,22 +89,17 @@ export default function ChatTab({ userName }) {
     }
   };
 
-  // --- NEW: Auto-resize logic for the textarea ---
   const handleInputChange = (e) => {
     setInput(e.target.value);
     if (textareaRef.current) {
-      // Reset height momentarily to get the true scrollHeight
       textareaRef.current.style.height = 'auto';
-      // Max height of ~114px is about 4-5 lines of text. 
-      // If it exceeds this, it will become scrollable.
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 114)}px`;
     }
   };
 
-  // --- NEW: Enter to send, Shift+Enter for new line ---
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault(); // Prevents adding a new line
+      e.preventDefault(); 
       handleSend();
     }
   };
@@ -103,6 +129,40 @@ export default function ChatTab({ userName }) {
         
         {/* Messages Scroll Area */}
         <div className="chat-scroll-area" style={{ flex: 1, overflowY: 'auto', padding: '20px 40px 20px 20px', display: 'flex', flexDirection: 'column' }}>
+          
+          {/* --- NEW: Floating New Chat Button --- */}
+          {messages.length > 0 && (
+            <button 
+              onClick={handleNewChat}
+              style={{
+                alignSelf: 'flex-end',
+                marginBottom: '24px',
+                padding: '8px 16px',
+                backgroundColor: 'var(--container-bg)',
+                color: 'var(--text-color)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                fontWeight: '500',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--primary)';
+                e.currentTarget.style.color = '#fff';
+                e.currentTarget.style.borderColor = 'var(--primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--container-bg)';
+                e.currentTarget.style.color = 'var(--text-color)';
+                e.currentTarget.style.borderColor = 'var(--border-color)';
+              }}
+            >
+              + New Chat
+            </button>
+          )}
+
           {messages.length === 0 ? (
             <div style={{ textAlign: 'center', color: '#888', margin: 'auto' }}>
               <h2 style={{ 
@@ -112,9 +172,8 @@ export default function ChatTab({ userName }) {
                 fontSize: '3rem',
                 letterSpacing: '0.5px'
               }}>
-              {getGreeting()}{userName ? `, ${userName.split(' ')[0]}` : '!'}
-</h2>
-              
+                {getGreeting()}{userName ? `, ${userName.split(' ')[0]}` : '!'}
+              </h2>
             </div>
           ) : (
             messages.map((msg) => (
@@ -178,13 +237,11 @@ export default function ChatTab({ userName }) {
 
         {/* Input Bar Area */}
         <div style={{ flexShrink: 0, padding: '20px', borderTop: '1px solid var(--border-color)', backgroundColor: 'var(--bg-color)' }}>
-          {/* Changed alignItems from 'center' to 'flex-end' so the send button stays at the bottom when the text area grows */}
           <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-end', width: '100%' }}>
             
-            {/* SWAPPED <input> FOR <textarea> */}
             <textarea 
               ref={textareaRef}
-              className="hide-scrollbar" // <--- ADD THIS CLASS
+              className="hide-scrollbar" 
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
@@ -206,7 +263,7 @@ export default function ChatTab({ userName }) {
                 boxSizing: 'border-box',
                 boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.02)',
                 resize: 'none',     
-                overflowY: 'auto' // Keeps the ability to scroll, but the CSS hides the bar
+                overflowY: 'auto' 
               }}
             />
 
@@ -216,7 +273,7 @@ export default function ChatTab({ userName }) {
               style={{ 
                 position: 'absolute',
                 right: '8px', 
-                bottom: '8px', // Pinned to the bottom right so it stays aligned as textarea grows
+                bottom: '8px', 
                 width: '38px',            
                 height: '38px',           
                 margin: 0,                

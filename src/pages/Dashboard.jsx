@@ -22,7 +22,9 @@ export default function Dashboard(props) {
         message={`Are you sure you want to delete ${props.fileToDelete?.filename || props.subjectToDelete}? This action cannot be undone.`}
       />
 
-      <Sidebar activeTab={props.activeTab} setActiveTab={props.setActiveTab} isCollapsed={props.isCollapsed} setIsCollapsed={props.setIsCollapsed} />
+      <Sidebar activeTab={props.activeTab} setActiveTab={props.setActiveTab} isCollapsed={props.isCollapsed} setIsCollapsed={props.setIsCollapsed}
+      activeSessionId={props.activeSessionId}    
+  setActiveSessionId={props.setActiveSessionId}  />
 
       <div className="main-content">
         <Topbar 
@@ -34,7 +36,8 @@ export default function Dashboard(props) {
 
           {/* Render the Chat Tab */}
           {props.activeTab === 'chat' && (
-            <ChatTab userName={props.userName} />
+            <ChatTab userName={props.userName} activeSessionId={props.activeSessionId} 
+        setActiveSessionId={props.setActiveSessionId} />
           )}
           
           {/* Render the combined File Manager Tab */}
