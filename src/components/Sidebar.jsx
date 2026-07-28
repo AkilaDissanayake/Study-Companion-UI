@@ -5,10 +5,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { getSidebarChats, deleteChatSession } from '../services/api';
+import { getSidebarChats, deleteChatSession,generateChatQuiz } from '../services/api';
 import ConfirmDialog from './ConfirmDialog';
 
-export default function Sidebar({ activeTab, setActiveTab, isCollapsed, setIsCollapsed, activeSessionId, setActiveSessionId }) {
+export default function Sidebar({ activeTab, setActiveTab, isCollapsed, setIsCollapsed, activeSessionId, setActiveSessionId,setActiveQuizId }) {
   const [chatHistory, setChatHistory] = useState([]);
   
   // Confirmation Modal States
@@ -49,10 +49,22 @@ export default function Sidebar({ activeTab, setActiveTab, isCollapsed, setIsCol
     setOpenMenuId(openMenuId === sessionId ? null : sessionId);
   };
 
-  const handleGenerateQuiz = (e, chat) => {
+ const handleGenerateQuiz = async (e, chat) => {
     e.stopPropagation();
     setOpenMenuId(null);
-    alert(`Coming soon: Generate Quiz for "${chat.title || 'this chat'}"`);
+    
+    // Optional: You can set a global loading state here if you want
+    try {
+      const response = await generateChatQuiz(chat.session_id);
+      if (response.status === 'success') {
+        // Automatically set the new quiz ID and switch to the Quizzes tab!
+        if (setActiveQuizId) setActiveQuizId(response.data.quiz_id);
+        setActiveTab('quizzes');
+      }
+    } catch (error) {
+      console.error("Failed to generate quiz:", error);
+      alert("Failed to generate quiz. Please try again.");
+    } 
   };
 
   const handleDeleteClick = (e, chat) => {
@@ -104,7 +116,17 @@ export default function Sidebar({ activeTab, setActiveTab, isCollapsed, setIsCol
             </svg>
           </button>
         </div>
-      
+        {/* MY QUIZZES TAB */}
+          <li 
+            className={`p-2 rounded cursor-pointer transition-colors ${activeTab === 'quizzes' ? 'bg-blue-600' : 'hover:bg-gray-800'}`} 
+            onClick={() => {
+              setActiveTab('quizzes');
+              if (setActiveQuizId) setActiveQuizId(null); // Clear active quiz to show the list view
+            }}
+            style={{ marginTop: '8px', display: 'flex', alignItems: 'center' }}
+          >
+             {!isCollapsed && 'My Quizzes'}
+          </li>
         <ul>
           {/* AI TUTOR TAB */}
           <li 

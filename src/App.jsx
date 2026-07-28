@@ -13,13 +13,15 @@ function decodeJwt(token) {
 function App() {
   // 1. Grab auth tools from Context
   const { userId, userName, isLoading, login } = useAuth();
-
+  
+  
   // Application State
   const [view, setView] = useState('login'); 
   const [activeTab, setActiveTab] = useState('files'); 
   const [showPopup, setShowPopup] = useState(false);
   const [config, setConfig] = useState({});
   const [activeSessionId, setActiveSessionId] = useState(null);
+  const [activeQuizId, setActiveQuizId] = useState(null);
   // UI States
   const [theme, setTheme] = useState('light');
   const [language, setLanguage] = useState('english');
@@ -315,6 +317,8 @@ function App() {
         handleGetFileUrl={handleGetFileUrl}
         activeSessionId={activeSessionId} 
         setActiveSessionId={setActiveSessionId}
+        activeQuizId={activeQuizId}
+        setActiveQuizId={setActiveQuizId}
       />
     );
   }

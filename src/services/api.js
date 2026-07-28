@@ -220,3 +220,49 @@ export async function deleteChatSession(sessionId) {
   });
   return handleResponse(res);
 }
+
+/**
+ * Triggers the backend LangGraph agent to generate a quiz from chat history.
+ * @param {string} sessionId - The ID of the chat session
+ */
+export async function generateChatQuiz(sessionId) {
+  const url = `${API_BASE_URL}/chats/${sessionId}/quiz`;
+  const res = await fetch(url, {
+    method: 'POST',
+    credentials: 'include' 
+  });
+  return handleResponse(res);
+}
+
+/**
+ * Sends the user's selected answers to the backend for secure grading.
+ * @param {string} quizId - The unique ID of the generated quiz
+ * @param {object} answersData - A dictionary of answers, e.g., {"0": "A", "1": "C"}
+ */
+export async function submitQuizAnswers(quizId, answersData) {
+  const url = `${API_BASE_URL}/quizzes/${quizId}/grade`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 
+      'Content-Type': 'application/json' 
+    },
+    credentials: 'include',
+    body: JSON.stringify({ answers: answersData })
+  });
+  return handleResponse(res);
+}
+
+
+// Fetch all quizzes for the list view
+export async function getMyQuizzes() {
+  const url = `${API_BASE_URL}/quizzes`;
+  const res = await fetch(url, { method: 'GET', credentials: 'include' });
+  return handleResponse(res);
+}
+
+// Fetch a single sanitized quiz to take it
+export async function getQuizById(quizId) {
+  const url = `${API_BASE_URL}/quizzes/${quizId}`;
+  const res = await fetch(url, { method: 'GET', credentials: 'include' });
+  return handleResponse(res);
+}
