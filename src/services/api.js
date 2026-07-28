@@ -210,3 +210,13 @@ export async function getChatHistory(sessionId) {
   });
   return handleResponse(res);
 }
+
+// Delete a chat session by ID
+export async function deleteChatSession(sessionId) {
+  const url = `${API_BASE_URL}/chats/${sessionId}`;
+  const res = await fetch(url, {
+    method: 'DELETE',
+    credentials: 'include'
+  });
+  return handleResponse(res);
+}
