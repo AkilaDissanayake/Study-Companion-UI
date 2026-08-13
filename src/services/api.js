@@ -43,13 +43,16 @@ export async function checkAuthSession() {
  * Sends the Google OAuth token to the backend for verification.
  * @param {string} googleToken - The JWT provided by Google Login.
  * @returns {Promise<{user_id: string, config: Object}>} User ID and their saved preferences.
+ *   Note: The backend returns { status, data }, we unwrap to data here for consistency.
  */
 export async function loginWithGoogle(googleToken) {
   const res = await fetch(`${API_BASE_URL}/login/google?token=${googleToken}`, {
     method: 'POST',
     credentials: 'include'
   });
-  return handleResponse(res);
+  const json = await handleResponse(res);
+  // The /login/google endpoint returns { status: 'success', data: { user_id, config } }
+  return json.data ?? json;
 }
 
 /**

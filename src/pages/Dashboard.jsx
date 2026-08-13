@@ -1,89 +1,154 @@
 /**
  * @file Dashboard.jsx
- * @description The main authenticated layout wrapper. 
- * It acts as the container for the Sidebar, Topbar, and the active content Tab.
+ * @description The main authenticated layout. Owns all dashboard-level UI state
+ * (active tab, sidebar collapse, chat/quiz session IDs, profile menu) and composes
+ * child tabs using custom hooks — no prop relay from App.jsx.
  */
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
-import FileManagerTab from '../components/FileManagerTab'; 
+import FileManagerTab from '../components/FileManagerTab';
 import SettingsTab from '../components/SettingsTab';
 import ConfirmDialog from '../components/ConfirmDialog';
 import ChatTab from '../components/ChatTab';
-import QuizzesTab from '../components/QuizzesTab'; // Ensure this is imported!
+import QuizzesTab from '../components/QuizzesTab';
+import { useFileManager } from '../hooks/useFileManager';
+import { useSettings } from '../hooks/useSettings';
+import { useAuth } from '../context/AuthContext';
+import * as api from '../services/api';
 
-export default function Dashboard(props) {
+export default function Dashboard({ showPopup }) {
+  const { userId } = useAuth();
+
+  // ── Layout / navigation state ──────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState('files');
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  // ── Chat / quiz session state ──────────────────────────────────────────
+  const [activeSessionId, setActiveSessionId] = useState(null);
+  const [activeQuizId, setActiveQuizId] = useState(null);
+
+  // ── Domain hooks ───────────────────────────────────────────────────────
+  const fileManager = useFileManager();
+  const settings = useSettings();
+
+  // Load initial config (theme + language + subjects) once the user is known
+  useEffect(() => {
+    if (!userId) return;
+
+    const loadConfig = async () => {
+      try {
+        const configData = await api.getUserConfig();
+        if (configData.theme) {
+          settings.setTheme(configData.theme);
+          settings.applyTheme(configData.theme);
+        }
+        if (configData.language) settings.setLanguage(configData.language);
+      } catch (err) {
+        console.error('Failed to fetch initial config:', err);
+      }
+    };
+
+    loadConfig();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  // Refresh file list and subjects when navigating to the files tab
+  useEffect(() => {
+    if (userId && activeTab === 'files') {
+      fileManager.fetchSubjects();
+      fileManager.fetchUserFiles();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, activeTab]);
+
   return (
     <div className="dashboard-layout">
-      {props.showPopup && <div className="popup-overlay"><div className="popup-card">✓ Login Successful!</div></div>}
-      
-      <ConfirmDialog 
-        isOpen={props.isConfirmOpen} 
-        onClose={() => props.setIsConfirmOpen(false)} 
-        onConfirm={props.confirmDelete}
-        message={`Are you sure you want to delete ${props.fileToDelete?.filename || props.subjectToDelete}? This action cannot be undone.`}
+      {showPopup && (
+        <div className="popup-overlay">
+          <div className="popup-card">✓ Login Successful!</div>
+        </div>
+      )}
+
+      {/* Global delete confirmation dialog (for file manager) */}
+      <ConfirmDialog
+        isOpen={fileManager.isConfirmOpen}
+        onClose={() => fileManager.setIsConfirmOpen(false)}
+        onConfirm={fileManager.confirmDelete}
+        message={`Are you sure you want to delete "${
+          fileManager.fileToDelete?.filename ?? fileManager.subjectToDelete
+        }"? This action cannot be undone.`}
       />
 
-      <Sidebar 
-        activeTab={props.activeTab} 
-        setActiveTab={props.setActiveTab} 
-        isCollapsed={props.isCollapsed} 
-        setIsCollapsed={props.setIsCollapsed}
-        activeSessionId={props.activeSessionId}    
-        setActiveSessionId={props.setActiveSessionId} 
-        setActiveQuizId={props.setActiveQuizId} /* FIX 1: Added props. here */
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        isCollapsed={isCollapsed}
+        setIsCollapsed={setIsCollapsed}
+        activeSessionId={activeSessionId}
+        setActiveSessionId={setActiveSessionId}
+        setActiveQuizId={setActiveQuizId}
       />
 
       <div className="main-content">
-        <Topbar 
-          showProfileMenu={props.showProfileMenu} 
-          setShowProfileMenu={props.setShowProfileMenu} 
+        <Topbar
+          showProfileMenu={showProfileMenu}
+          setShowProfileMenu={setShowProfileMenu}
         />
 
-        <div className={`content-area ${props.activeTab === 'chat' ? 'chat-active' : ''}`}>
+        <div className={`content-area ${activeTab === 'chat' ? 'chat-active' : ''}`}>
 
-          {/* Render the Quizzes Tab */}
-          {props.activeTab === 'quizzes' && (
-            <QuizzesTab 
-              activeQuizId={props.activeQuizId} /* FIX 2: Added props. here */
-              setActiveQuizId={props.setActiveQuizId} /* FIX 3: Added props. here */
+          {activeTab === 'quizzes' && (
+            <QuizzesTab
+              activeQuizId={activeQuizId}
+              setActiveQuizId={setActiveQuizId}
             />
           )}
 
-          {/* Render the Chat Tab */}
-          {props.activeTab === 'chat' && (
-            <ChatTab 
-              userName={props.userName} 
-              activeSessionId={props.activeSessionId} 
-              setActiveSessionId={props.setActiveSessionId}  
+          {activeTab === 'chat' && (
+            <ChatTab
+              activeSessionId={activeSessionId}
+              setActiveSessionId={setActiveSessionId}
             />
           )}
-          
-          {/* Render the combined File Manager Tab */}
-          {props.activeTab === 'files' && (
-            <FileManagerTab 
-              isAddingSubject={props.isAddingSubject} selectedSubject={props.selectedSubject} 
-              handleSubjectChange={props.handleSubjectChange} subjects={props.subjects}
-              newSubject={props.newSubject} setNewSubject={props.setNewSubject} 
-              setSelectedFiles={props.setSelectedFiles} setUploadStatus={props.setUploadStatus}
-              handleFileUpload={props.handleFileUpload} uploadStatus={props.uploadStatus} 
-              searchQuery={props.searchQuery} setSearchQuery={props.setSearchQuery} 
-              isLoadingFiles={props.isLoadingFiles} uploadedFiles={props.uploadedFiles}
-              expandedFolders={props.expandedFolders} setExpandedFolders={props.setExpandedFolders} 
-              handleDownload={props.handleDownload} fetchUserFiles={props.fetchUserFiles}
-              initiateDelete={props.initiateDelete} isConfirmOpen={props.isConfirmOpen}     
-              setIsConfirmOpen={props.setIsConfirmOpen} fileToDelete={props.fileToDelete}           
-              confirmDelete={props.confirmDelete} subjectToDelete={props.subjectToDelete}
-              handleGetFileUrl={props.handleGetFileUrl}
+
+          {activeTab === 'files' && (
+            <FileManagerTab
+              // Upload
+              isAddingSubject={fileManager.isAddingSubject}
+              selectedSubject={fileManager.selectedSubject}
+              handleSubjectChange={fileManager.handleSubjectChange}
+              subjects={fileManager.subjects}
+              newSubject={fileManager.newSubject}
+              setNewSubject={fileManager.setNewSubject}
+              setSelectedFiles={fileManager.setSelectedFiles}
+              setUploadStatus={fileManager.setUploadStatus}
+              handleFileUpload={fileManager.handleFileUpload}
+              uploadStatus={fileManager.uploadStatus}
+              // File listing
+              searchQuery={fileManager.searchQuery}
+              setSearchQuery={fileManager.setSearchQuery}
+              isLoadingFiles={fileManager.isLoadingFiles}
+              uploadedFiles={fileManager.uploadedFiles}
+              expandedFolders={fileManager.expandedFolders}
+              setExpandedFolders={fileManager.setExpandedFolders}
+              // Actions
+              handleDownload={fileManager.handleDownload}
+              fetchUserFiles={fileManager.fetchUserFiles}
+              initiateDelete={fileManager.initiateDelete}
+              handleGetFileUrl={fileManager.handleGetFileUrl}
             />
           )}
-          
-          {/* Render the Settings Tab */}
-          {props.activeTab === 'settings' && (
-            <SettingsTab 
-              theme={props.theme} setTheme={props.setTheme} 
-              language={props.language} setLanguage={props.setLanguage} 
-              handleSavePreferences={props.handleSavePreferences} 
+
+          {activeTab === 'settings' && (
+            <SettingsTab
+              theme={settings.theme}
+              setTheme={settings.setTheme}
+              language={settings.language}
+              setLanguage={settings.setLanguage}
+              handleSavePreferences={settings.handleSavePreferences}
             />
           )}
         </div>

@@ -1,25 +1,31 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ChatMessage from './ChatMessage';
 import { sendChatMessage, getChatHistory } from '../services/api';
-export default function ChatTab({ userName , activeSessionId, setActiveSessionId }) {
+
+export default function ChatTab({ userName, activeSessionId, setActiveSessionId, setRefreshSidebarTrigger }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [sessionId, setSessionId] = useState(activeSessionId || null)
+  const [sessionId, setSessionId] = useState(activeSessionId || null);
+  
+  // 🚀 Smart scroll control: allows manual scrolling up without getting yanked down
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
+  
   const messagesEndRef = useRef(null);
+  const scrollContainerRef = useRef(null);
   const textareaRef = useRef(null); 
 
-  // Add this inside ChatTab.jsx
-useEffect(() => {
+  // Load chat history when session changes
+  useEffect(() => {
     const loadSelectedChat = async () => {
-        if (!activeSessionId) return; // If null, it's a new chat, do nothing
+        if (!activeSessionId) return; 
         
         setIsLoading(true);
         try {
             const response = await getChatHistory(activeSessionId);
-            // Assuming your backend JSONB maps perfectly to your frontend message format
             if (response.data && response.data.chat_state) {
                 setMessages(response.data.chat_state);
+                setAutoScrollEnabled(true);
             }
         } catch (error) {
             console.error("Failed to load chat history:", error);
@@ -29,11 +35,35 @@ useEffect(() => {
     };
 
     loadSelectedChat();
-}, [activeSessionId]); // This runs every time the user clicks a different chat in the sidebar
-  // Auto-scroll to bottom only when new messages arrive
+  }, [activeSessionId]); 
+
+  // ==========================================
+  // 🚀 BULLETPROOF SMART SCROLL ENGINE
+  // ==========================================
+  const scrollToBottom = (behavior = "smooth") => {
+    if (!autoScrollEnabled) return;
+    
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
+      }, 50);
+    });
+  };
+
+  // Trigger auto-scroll only if enabled
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (autoScrollEnabled) {
+      scrollToBottom();
+    }
   }, [messages, isLoading]);
+
+  // Detect manual user scrolling
+  const handleScroll = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.target;
+    // If user scrolls up more than 80px from the bottom, lock auto-scroll off
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 80;
+    setAutoScrollEnabled(isAtBottom);
+  };
   
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -42,10 +72,10 @@ useEffect(() => {
     return "Good evening";
   };
 
-  // --- NEW: Reset the chat state to start fresh ---
   const handleNewChat = () => {
     setSessionId(null);
     setMessages([]);
+    setAutoScrollEnabled(true);
   };
 
   const handleSend = async () => {
@@ -57,28 +87,45 @@ useEffect(() => {
     setMessages(prev => [...prev, userMsg]);
     setInput("");
     setIsLoading(true);
+    
+    // Force auto-scroll when user sends a message
+    setAutoScrollEnabled(true);
+    scrollToBottom("smooth");
 
     if (textareaRef.current) {
       textareaRef.current.style.height = '54px';
     }
 
     try {
-      // --- UPDATED: Pass the sessionId to the backend ---
       const response = await sendChatMessage(userMsg.text, sessionId);
       
       if (response.status === "success") {
         setMessages(prev => [...prev, { id: `bot-${Date.now()}`, role: "bot", text: response.data.response }]);
         
-        // --- NEW: Save the session ID if the backend just created a new chat ---
         if (!sessionId && response.data.session_id) {
           setSessionId(response.data.session_id);
+        }
+
+        // 🚀 Trigger sidebar to auto-update chat list without manual page refresh
+        if (setRefreshSidebarTrigger) {
+          setRefreshSidebarTrigger(prev => prev + 1);
         }
       }
     } catch (error) {
       console.error("Chat Error:", error);
-      setMessages(prev => [...prev, { id: `error-${Date.now()}`, role: "bot", text: `⚠️ Connection Error: ${error.message}` }]);
+      setMessages(prev => [
+        ...prev, 
+        { 
+          id: `error-${Date.now()}`, 
+          role: "bot", 
+          text: `⚠️ **System Error:** Connection failed.\n\n*Details: ${error.message}*`,
+          isError: true 
+        }
+      ]);
     } finally {
       setIsLoading(false);
+      setAutoScrollEnabled(true);
+      scrollToBottom("smooth");
     }
   };
 
@@ -86,6 +133,7 @@ useEffect(() => {
     const element = document.getElementById(id);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setAutoScrollEnabled(false); // Stop auto-scrolling when navigating history
     }
   };
 
@@ -113,6 +161,8 @@ useEffect(() => {
       flexDirection: 'column', 
       backgroundColor: 'var(--bg-color)',
       width: '100%',
+      height: '100%',
+      overflow: 'hidden'
     }}>
       
       <div style={{ 
@@ -127,10 +177,22 @@ useEffect(() => {
         minHeight: 0 
       }}>
         
-        {/* Messages Scroll Area */}
-        <div className="chat-scroll-area" style={{ flex: 1, overflowY: 'auto', padding: '20px 40px 20px 20px', display: 'flex', flexDirection: 'column' }}>
+        {/* Scrollable Chat Area */}
+        <div 
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className="chat-scroll-area" 
+          style={{ 
+            flex: 1, 
+            overflowY: 'auto', 
+            overflowX: 'hidden',
+            padding: '20px 40px 20px 20px', 
+            display: 'flex', 
+            flexDirection: 'column',
+            scrollBehavior: 'smooth'
+          }}
+        >
           
-          {/* --- NEW: Floating New Chat Button --- */}
           {messages.length > 0 && (
             <button 
               onClick={handleNewChat}
@@ -177,8 +239,8 @@ useEffect(() => {
             </div>
           ) : (
             messages.map((msg) => (
-              <div key={msg.id} id={msg.id}>
-                <ChatMessage role={msg.role} text={msg.text} />
+              <div key={msg.id} id={msg.id} style={{ width: '100%' }}>
+                <ChatMessage role={msg.role} text={msg.text} isError={msg.isError} />
               </div>
             ))
           )}
@@ -188,10 +250,11 @@ useEffect(() => {
               Thinking...
             </div>
           )}
-          <div ref={messagesEndRef} />
+          
+          <div ref={messagesEndRef} style={{ float: 'left', clear: 'both' }} />
         </div>
 
-        {/* Floating Minimap Navigation Bars */}
+        {/* Quick jump menu for user questions */}
         {userQuestions.length > 0 && (
           <div style={{
             position: 'absolute',
@@ -296,6 +359,7 @@ useEffect(() => {
 
           </div>
         </div>
+
       </div>
     </div>
   );
