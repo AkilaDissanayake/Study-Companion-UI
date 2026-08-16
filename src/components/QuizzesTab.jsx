@@ -1,12 +1,14 @@
 // components/QuizzesTab.jsx
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Check, X, ClipboardList } from 'lucide-react';
-import { getMyQuizzes, getQuizById, submitQuizAnswers } from '../services/api';
+import { ArrowLeft, Check, X, ClipboardList, Trash2 } from 'lucide-react';
+import { getMyQuizzes, getQuizById, submitQuizAnswers, deleteQuiz } from '../services/api';
 import { useNotify } from '../context/NotificationContext';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import Badge from './ui/Badge';
 import EmptyState from './ui/EmptyState';
+import IconButton from './ui/IconButton';
+import ConfirmDialog from './ConfirmDialog';
 
 export default function QuizzesTab({ activeQuizId, setActiveQuizId }) {
   const notify = useNotify();
@@ -18,6 +20,10 @@ export default function QuizzesTab({ activeQuizId, setActiveQuizId }) {
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [gradingResults, setGradingResults] = useState(null);
+
+  // Delete confirmation
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [quizToDelete, setQuizToDelete] = useState(null);
 
   useEffect(() => {
     fetchQuizList();
@@ -94,6 +100,28 @@ export default function QuizzesTab({ activeQuizId, setActiveQuizId }) {
     }
   };
 
+  const handleDeleteClick = (e, quiz) => {
+    e.stopPropagation();
+    setQuizToDelete(quiz);
+    setIsConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!quizToDelete) return;
+    try {
+      await deleteQuiz(quizToDelete.id);
+      if (activeQuizId === quizToDelete.id) {
+        setActiveQuizId(null);
+      }
+      await fetchQuizList();
+    } catch (err) {
+      notify.error(err.message || 'Failed to delete quiz. Please try again.');
+    } finally {
+      setIsConfirmOpen(false);
+      setQuizToDelete(null);
+    }
+  };
+
   if (quizNotFound) {
     return (
       <div>
@@ -112,6 +140,13 @@ export default function QuizzesTab({ activeQuizId, setActiveQuizId }) {
   if (!activeQuizId || !currentQuiz) {
     return (
       <div>
+        <ConfirmDialog
+          isOpen={isConfirmOpen}
+          onClose={() => setIsConfirmOpen(false)}
+          onConfirm={handleConfirmDelete}
+          message="Are you sure you want to delete this quiz? This action cannot be undone."
+        />
+
         <h2>My Quizzes</h2>
         {quizList.length === 0 ? (
           <EmptyState
@@ -122,11 +157,25 @@ export default function QuizzesTab({ activeQuizId, setActiveQuizId }) {
         ) : (
           <div style={{ display: 'grid', gap: 'var(--space-3)', marginTop: 'var(--space-5)' }}>
             {quizList.map(quiz => (
-              <Card key={quiz.id} hoverable onClick={() => loadQuiz(quiz.id)} style={{ cursor: 'pointer' }}>
-                <h3 style={{ color: 'var(--color-primary-500)' }}>{quiz.title}</h3>
-                <small style={{ color: 'var(--color-text-tertiary)' }}>
-                  Created: {new Date(quiz.created_at).toLocaleDateString()}
-                </small>
+              <Card
+                key={quiz.id}
+                hoverable
+                onClick={() => loadQuiz(quiz.id)}
+                style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              >
+                <div>
+                  <h3 style={{ color: 'var(--color-primary-500)' }}>{quiz.title}</h3>
+                  <small style={{ color: 'var(--color-text-tertiary)' }}>
+                    Created: {new Date(quiz.created_at).toLocaleDateString()}
+                  </small>
+                </div>
+                <IconButton
+                  variant="ghost"
+                  aria-label="Delete quiz"
+                  title="Delete quiz"
+                  icon={<Trash2 size={16} color="var(--color-danger)" />}
+                  onClick={(e) => handleDeleteClick(e, quiz)}
+                />
               </Card>
             ))}
           </div>

@@ -24,7 +24,7 @@ const LANGUAGE_OPTIONS = [
 export default function SettingsTab({
   theme, setTheme, language, setLanguage, handleSavePreferences
 }) {
-  const { userName, userId, logout } = useAuth();
+  const { userName, logout } = useAuth();
   const [justSaved, setJustSaved] = useState(false);
 
   const handleSave = async () => {
@@ -50,10 +50,6 @@ export default function SettingsTab({
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-body)' }}>
             <span style={{ color: 'var(--color-text-secondary)' }}>Name</span>
             <span style={{ fontWeight: 600 }}>{userName}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-body)' }}>
-            <span style={{ color: 'var(--color-text-secondary)' }}>User ID</span>
-            <span style={{ fontSize: 'var(--font-size-body-sm)', color: 'var(--color-text-tertiary)' }}>{userId}</span>
           </div>
         </div>
       </Card>

@@ -365,3 +365,8 @@ export async function getMyQuizzes() {
 export async function getQuizById(quizId) {
   return request(`${API_BASE_URL}/quizzes/${quizId}`, { method: 'GET' });
 }
+
+// Delete a quiz by ID
+export async function deleteQuiz(quizId) {
+  return request(`${API_BASE_URL}/quizzes/${quizId}`, { method: 'DELETE' });
+}
