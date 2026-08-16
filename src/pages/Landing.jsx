@@ -50,12 +50,9 @@ export default function Landing() {
             AI tutoring, smart quizzes, and all your materials in one calm, focused workspace.
           </p>
 
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--space-4)', marginTop: 'var(--space-7)' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--space-7)' }}>
             <Link to="/signup">
               <Button size="md" style={{ padding: '10px 24px' }}>Start Free Trial</Button>
-            </Link>
-            <Link to="/login">
-              <Button variant="secondary" size="md" style={{ padding: '10px 24px' }}>Log in</Button>
             </Link>
           </div>
         </div>
