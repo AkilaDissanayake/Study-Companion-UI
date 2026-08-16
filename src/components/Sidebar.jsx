@@ -16,11 +16,13 @@ import {
   MoreVertical,
   Wand2,
   Trash2,
+  Search,
 } from 'lucide-react';
 import { getSidebarChats, deleteChatSession, generateChatQuiz } from '../services/api';
 import { useNotify } from '../context/NotificationContext';
 import ConfirmDialog from './ConfirmDialog';
 import IconButton from './ui/IconButton';
+import { Input } from './ui/Input';
 
 const NAV_ITEMS = [
   { tab: 'quizzes', label: 'My Quizzes', icon: ClipboardList },
@@ -41,6 +43,7 @@ export default function Sidebar({
 }) {
   const notify = useNotify();
   const [chatHistory, setChatHistory] = useState([]);
+  const [chatSearchQuery, setChatSearchQuery] = useState('');
 
   // Delete confirmation
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -118,6 +121,13 @@ export default function Sidebar({
     }
   };
 
+  // Search chats by title (matches the same "New Chat" fallback shown for
+  // untitled sessions, so searching that phrase finds them too).
+  const filteredChatHistory = chatHistory.filter((chat) => {
+    const title = chat.title?.trim() ? chat.title : 'New Chat';
+    return title.toLowerCase().includes(chatSearchQuery.trim().toLowerCase());
+  });
+
   // ── Shared nav item style helper ────────────────────────────────────
 
   const navItemStyle = (tab) => ({
@@ -189,20 +199,49 @@ export default function Sidebar({
 
               {/* Chat history sub-list — rendered directly under the AI Tutor item */}
               {tab === 'chat' && activeTab === 'chat' && !isCollapsed && chatHistory.length > 0 && (
+                <div style={{ margin: '8px 8px 16px 20px' }}>
+                  <div style={{ padding: '0 0 0 8px' }}>
+                    <Input
+                      iconLeft={<Search size={14} />}
+                      placeholder="Search chats..."
+                      value={chatSearchQuery}
+                      onChange={(e) => setChatSearchQuery(e.target.value)}
+                      style={{
+                        padding: '6px 10px 6px 30px',
+                        fontSize: 'var(--font-size-body-sm)',
+                        background: 'var(--color-sidebar-surface-hover)',
+                        borderColor: 'var(--color-sidebar-border)',
+                        color: 'var(--color-sidebar-text)',
+                      }}
+                    />
+                  </div>
+
+                  {filteredChatHistory.length === 0 ? (
+                    <p
+                      style={{
+                        padding: '10px 8px 0 12px',
+                        margin: 0,
+                        fontSize: 'var(--font-size-body-sm)',
+                        color: 'var(--color-sidebar-text-muted)',
+                      }}
+                    >
+                      No matching chats.
+                    </p>
+                  ) : (
                 <ul
                   style={{
                     padding: '0 0 0 8px',
-                    margin: '8px 8px 16px 20px',
+                    margin: '8px 0 0',
                     fontSize: 'var(--font-size-body-sm)',
                     listStyleType: 'none',
                     borderLeft: '1px solid var(--color-sidebar-border)',
                   }}
                 >
-                  {chatHistory.map((chat) => (
+                  {filteredChatHistory.map((chat) => (
                     <li
                       key={chat.session_id}
                       onClick={() => setActiveSessionId(chat.session_id)}
-                      title={chat.title || 'Chat Session'}
+                      title={chat.title?.trim() ? chat.title : 'New Chat'}
                       style={{
                         padding: '8px 8px 8px 12px',
                         margin: '2px 0',
@@ -308,6 +347,8 @@ export default function Sidebar({
                     </li>
                   ))}
                 </ul>
+                  )}
+                </div>
               )}
             </React.Fragment>
           ))}
