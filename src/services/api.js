@@ -43,15 +43,19 @@ async function handleResponse(res) {
  * Shared fetch wrapper: attaches credentials, catches network failures,
  * surfaces 401/403 to the registered global handler, and normalizes errors
  * via handleResponse/ApiError.
+ * @param {boolean} [silent401] - Skip the global "session expired" toast for
+ *   a 401/403 on this call. Used for the initial session probe on app load,
+ *   where an unauthenticated visitor (e.g. on the public landing page) has
+ *   never had a session to "expire" in the first place.
  */
-async function request(url, options = {}) {
+async function request(url, options = {}, silent401 = false) {
   let res;
   try {
     res = await fetch(url, { credentials: 'include', ...options });
   } catch {
     throw new ApiError({ status: 0, message: 'Network error. Please check your connection.', isNetworkError: true });
   }
-  notifyIfUnauthorized(res.status);
+  if (!silent401) notifyIfUnauthorized(res.status);
   return handleResponse(res);
 }
 
@@ -61,11 +65,14 @@ const jsonHeaders = { 'Content-Type': 'application/json' };
 // 1. AUTHENTICATION APIs
 // ==========================================
 /**
- * Checks if the user has an active, valid session cookie.
+ * Checks if the user has an active, valid session cookie. This is a silent
+ * probe (no "session expired" toast on a 401) — an unauthenticated visitor,
+ * e.g. on the public landing page, was never logged in, so there's no
+ * session to have "expired".
  * @returns {Promise<{user_id: string}>} The current user's ID.
  */
 export async function checkAuthSession() {
-  return request(`${API_BASE_URL}/auth/check`, { method: 'GET' });
+  return request(`${API_BASE_URL}/auth/check`, { method: 'GET' }, true);
 }
 
 /**
@@ -160,6 +167,19 @@ export async function logoutUser() {
   // Logout might not return JSON, so we just check if it succeeded
   if (!res.ok) throw new ApiError({ status: res.status, message: 'Logout failed' });
   return true;
+}
+
+// ==========================================
+// PRICING API (public, no auth)
+// ==========================================
+
+/**
+ * Fetches the hand-edited pricing tiers for the landing page.
+ * @returns {Promise<{tiers: Array<{id: string, name: string, price: number, currency: string, billing_period: string, cta_label: string, highlighted: boolean, features: string[]}>}>}
+ */
+export async function getPricing() {
+  const json = await request(`${API_BASE_URL}/pricing`, { method: 'GET' });
+  return json.data ?? json;
 }
 
 // ==========================================
