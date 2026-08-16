@@ -5,24 +5,57 @@
  * Handles fetching, posting, and error formatting for the application.
  */
 
+import { ApiError, parseErrorBody } from './ApiError';
+
 // Grab the backend URL from the environment, defaulting to localhost if missing
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
+// Handlers registered once (from App.jsx, after both AuthProvider and
+// NotificationProvider exist) so this plain module can react to auth failures
+// without importing React context directly.
+let globalHandlers = { onUnauthorized: null };
+export function registerApiHandlers(handlers) {
+  globalHandlers = { ...globalHandlers, ...handlers };
+}
+
+function notifyIfUnauthorized(status) {
+  if ((status === 401 || status === 403) && globalHandlers.onUnauthorized) {
+    globalHandlers.onUnauthorized(status);
+  }
+}
 
 /**
- * Standardizes API responses. Throws an error if the response is not OK.
+ * Standardizes API responses. Throws an ApiError if the response is not OK.
  * @param {Response} res - The raw fetch response object.
  * @returns {Promise<Object>} The parsed JSON data.
- * @throws {Error} If the network request fails or returns an error status.
+ * @throws {ApiError} If the response returns an error status.
  */
-// Helper function to handle JSON responses and errors uniformly
 async function handleResponse(res) {
   if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.detail || `API Error: ${res.status}`);
+    const body = await res.json().catch(() => ({}));
+    const { message, fieldErrors } = parseErrorBody(body, res.status);
+    throw new ApiError({ status: res.status, message, fieldErrors, rawDetail: body?.detail });
   }
   return res.json();
 }
+
+/**
+ * Shared fetch wrapper: attaches credentials, catches network failures,
+ * surfaces 401/403 to the registered global handler, and normalizes errors
+ * via handleResponse/ApiError.
+ */
+async function request(url, options = {}) {
+  let res;
+  try {
+    res = await fetch(url, { credentials: 'include', ...options });
+  } catch {
+    throw new ApiError({ status: 0, message: 'Network error. Please check your connection.', isNetworkError: true });
+  }
+  notifyIfUnauthorized(res.status);
+  return handleResponse(res);
+}
+
+const jsonHeaders = { 'Content-Type': 'application/json' };
 
 // ==========================================
 // 1. AUTHENTICATION APIs
@@ -32,11 +65,7 @@ async function handleResponse(res) {
  * @returns {Promise<{user_id: string}>} The current user's ID.
  */
 export async function checkAuthSession() {
-  const res = await fetch(`${API_BASE_URL}/auth/check`, {
-    method: 'GET',
-    credentials: 'include'
-  });
-  return handleResponse(res);
+  return request(`${API_BASE_URL}/auth/check`, { method: 'GET' });
 }
 
 /**
@@ -46,13 +75,74 @@ export async function checkAuthSession() {
  *   Note: The backend returns { status, data }, we unwrap to data here for consistency.
  */
 export async function loginWithGoogle(googleToken) {
-  const res = await fetch(`${API_BASE_URL}/login/google?token=${googleToken}`, {
-    method: 'POST',
-    credentials: 'include'
-  });
-  const json = await handleResponse(res);
+  const json = await request(`${API_BASE_URL}/login/google?token=${googleToken}`, { method: 'POST' });
   // The /login/google endpoint returns { status: 'success', data: { user_id, config } }
   return json.data ?? json;
+}
+
+/**
+ * Creates a new email/password account. Does not log the user in — the
+ * backend requires email verification before the first password login.
+ * @param {{name: string, email: string, password: string}} payload
+ */
+export async function signup(payload) {
+  return request(`${API_BASE_URL}/auth/signup`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Logs in with email + password and sets the session cookie (same cookie
+ * the Google flow sets).
+ * @param {{email: string, password: string}} payload
+ * @returns {Promise<{user_id: string, email: string, name: string, config: Object}>}
+ */
+export async function loginWithPassword(payload) {
+  const json = await request(`${API_BASE_URL}/login`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(payload),
+  });
+  return json.data ?? json;
+}
+
+/**
+ * Confirms an email address using the token from the verification email.
+ * @param {string} token
+ */
+export async function verifyEmail(token) {
+  return request(`${API_BASE_URL}/auth/verify-email`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify({ token }),
+  });
+}
+
+/**
+ * Requests a password reset email. Always resolves the same way regardless
+ * of whether the email is registered (the backend never reveals that).
+ * @param {string} email
+ */
+export async function requestPasswordReset(email) {
+  return request(`${API_BASE_URL}/auth/forgot-password`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify({ email }),
+  });
+}
+
+/**
+ * Sets a new password using the token from the reset email.
+ * @param {{token: string, newPassword: string}} payload
+ */
+export async function resetPassword({ token, newPassword }) {
+  return request(`${API_BASE_URL}/auth/reset-password`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify({ token, new_password: newPassword }),
+  });
 }
 
 /**
@@ -60,13 +150,16 @@ export async function loginWithGoogle(googleToken) {
  * @returns {Promise<boolean>} True if logout was successful.
  */
 export async function logoutUser() {
-  const res = await fetch(`${API_BASE_URL}/login/logout`, {
-    method: 'POST',
-    credentials: 'include'
-  });
+  let res;
+  try {
+    res = await fetch(`${API_BASE_URL}/login/logout`, { method: 'POST', credentials: 'include' });
+  } catch {
+    throw new ApiError({ status: 0, message: 'Network error. Please check your connection.', isNetworkError: true });
+  }
+  notifyIfUnauthorized(res.status);
   // Logout might not return JSON, so we just check if it succeeded
-  if (!res.ok) throw new Error('Logout failed');
-  return true; 
+  if (!res.ok) throw new ApiError({ status: res.status, message: 'Logout failed' });
+  return true;
 }
 
 // ==========================================
@@ -74,62 +167,76 @@ export async function logoutUser() {
 // ==========================================
 
 export async function getUserConfig() {
-  const res = await fetch(`${API_BASE_URL}/config/get`, {
-    method: 'GET',
-    credentials: 'include'
-  });
-  return handleResponse(res);
+  return request(`${API_BASE_URL}/config/get`, { method: 'GET' });
 }
 
 export async function getSubjects() {
-  const res = await fetch(`${API_BASE_URL}/config/subjects`, {
-    method: 'GET',
-    credentials: 'include'
-  });
-  return handleResponse(res);
+  return request(`${API_BASE_URL}/config/subjects`, { method: 'GET' });
 }
 
 export async function saveUserConfig(payload, isNew = false) {
   const endpoint = isNew ? '/config/create' : '/config/edit';
   const method = isNew ? 'POST' : 'PATCH';
-  
-  const res = await fetch(`${API_BASE_URL}${endpoint}`, {
-    method: method,
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(payload)
+
+  return request(`${API_BASE_URL}${endpoint}`, {
+    method,
+    headers: jsonHeaders,
+    body: JSON.stringify(payload),
   });
-  
-  // Return the original response object so the component can check res.ok
-  return res;
 }
 
 // ==========================================
 // 3. FILE MANAGEMENT APIs
 // ==========================================
+
 /**
- * Uploads an array of files to a specific subject folder.
- * Note: Browser automatically sets 'multipart/form-data' headers.
+ * Uploads an array of files to a specific subject folder, reporting real
+ * upload progress. Uses XMLHttpRequest because fetch() cannot report
+ * upload-progress events.
  * @param {FormData} formData - The files and target folder payload.
- * @returns {Promise<Response>} The raw fetch response.
+ * @param {(percent: number) => void} [onProgress] - Called with 0-100 as the upload progresses.
+ * @returns {Promise<Object>} The parsed JSON response, same shape as every other api.js function.
  */
-export async function uploadFiles(formData) {
-  // Note: We do NOT set 'Content-Type' here. The browser automatically 
-  // sets it to 'multipart/form-data' when we pass a FormData object.
-  const res = await fetch(`${API_BASE_URL}/files/upload`, {
-    method: 'POST',
-    credentials: 'include',
-    body: formData
+export function uploadFilesWithProgress(formData, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API_BASE_URL}/files/upload`);
+    xhr.withCredentials = true;
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+
+    xhr.onload = () => {
+      let body = {};
+      try {
+        body = JSON.parse(xhr.responseText);
+      } catch {
+        // non-JSON body, fall through with body = {}
+      }
+
+      notifyIfUnauthorized(xhr.status);
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(body);
+      } else {
+        const { message, fieldErrors } = parseErrorBody(body, xhr.status);
+        reject(new ApiError({ status: xhr.status, message, fieldErrors, rawDetail: body?.detail }));
+      }
+    };
+
+    xhr.onerror = () => {
+      reject(new ApiError({ status: 0, message: 'Network error during upload.', isNetworkError: true }));
+    };
+
+    xhr.send(formData);
   });
-  return res;
 }
 
 export async function getUserFiles() {
-  const res = await fetch(`${API_BASE_URL}/files/names`, {
-    method: 'GET',
-    credentials: 'include'
-  });
-  return handleResponse(res);
+  return request(`${API_BASE_URL}/files/names`, { method: 'GET' });
 }
 
 /**
@@ -140,39 +247,41 @@ export async function getUserFiles() {
  */
 export async function downloadFileBlob(filename, subject) {
   const url = `${API_BASE_URL}/files/download?filename=${encodeURIComponent(filename)}&subject=${encodeURIComponent(subject)}`;
-  const res = await fetch(url, {
-    method: 'GET',
-    credentials: 'include'
-  });
+  let res;
+  try {
+    res = await fetch(url, { method: 'GET', credentials: 'include' });
+  } catch {
+    throw new ApiError({ status: 0, message: 'Network error. Please check your connection.', isNetworkError: true });
+  }
 
-  if (!res.ok) throw new Error("Failed to download file.");
-  
-  // We return the raw Blob here, not JSON! 
+  notifyIfUnauthorized(res.status);
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const { message } = parseErrorBody(body, res.status);
+    throw new ApiError({ status: res.status, message: message || 'Failed to download file.', rawDetail: body?.detail });
+  }
+
+  // We return the raw Blob here, not JSON!
   // The component will use this Blob to trigger the browser download.
   return res.blob();
 }
 
 export async function deleteFile(filename, subject) {
-  const url = `${API_BASE_URL}/files/delete`;
-  const res = await fetch(url, {
+  return request(`${API_BASE_URL}/files/delete`, {
     method: 'DELETE',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filename, subject })
-  })
-  return handleResponse(res)};
-
-export async function deleteSubject(subject) {
-    const url = `${API_BASE_URL}/files/deletesubject`;
-    const res = await fetch(url, {
-        method: 'DELETE',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject })
-    });
-    return handleResponse(res);
+    headers: jsonHeaders,
+    body: JSON.stringify({ filename, subject }),
+  });
 }
 
+export async function deleteSubject(subject) {
+  return request(`${API_BASE_URL}/files/deletesubject`, {
+    method: 'DELETE',
+    headers: jsonHeaders,
+    body: JSON.stringify({ subject }),
+  });
+}
 
 // ==========================================
 // CHAT API
@@ -183,45 +292,27 @@ export async function deleteSubject(subject) {
  * @param {string|null} session_id - The active chat session ID. Null creates a new chat.
  */
 export async function sendChatMessage(raw_question, session_id = null) {
-  const url = `${API_BASE_URL}/chat`;
-  const res = await fetch(url, {
+  return request(`${API_BASE_URL}/chat`, {
     method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: jsonHeaders,
     // Send session_id instead of chat_history!
-    body: JSON.stringify({ raw_question, session_id }) 
+    body: JSON.stringify({ raw_question, session_id }),
   });
-  return handleResponse(res);
 }
 
 // Fetch the list of chats for the sidebar
 export async function getSidebarChats() {
-  const url = `${API_BASE_URL}/chats`;
-  const res = await fetch(url, {
-    method: 'GET',
-    credentials: 'include'
-  });
-  return handleResponse(res);
+  return request(`${API_BASE_URL}/chats`, { method: 'GET' });
 }
 
 // Fetch the full history when a chat is clicked
 export async function getChatHistory(sessionId) {
-  const url = `${API_BASE_URL}/chats/${sessionId}`;
-  const res = await fetch(url, {
-    method: 'GET',
-    credentials: 'include'
-  });
-  return handleResponse(res);
+  return request(`${API_BASE_URL}/chats/${sessionId}`, { method: 'GET' });
 }
 
 // Delete a chat session by ID
 export async function deleteChatSession(sessionId) {
-  const url = `${API_BASE_URL}/chats/${sessionId}`;
-  const res = await fetch(url, {
-    method: 'DELETE',
-    credentials: 'include'
-  });
-  return handleResponse(res);
+  return request(`${API_BASE_URL}/chats/${sessionId}`, { method: 'DELETE' });
 }
 
 /**
@@ -229,12 +320,7 @@ export async function deleteChatSession(sessionId) {
  * @param {string} sessionId - The ID of the chat session
  */
 export async function generateChatQuiz(sessionId) {
-  const url = `${API_BASE_URL}/chats/${sessionId}/quiz`;
-  const res = await fetch(url, {
-    method: 'POST',
-    credentials: 'include' 
-  });
-  return handleResponse(res);
+  return request(`${API_BASE_URL}/chats/${sessionId}/quiz`, { method: 'POST' });
 }
 
 /**
@@ -243,29 +329,19 @@ export async function generateChatQuiz(sessionId) {
  * @param {object} answersData - A dictionary of answers, e.g., {"0": "A", "1": "C"}
  */
 export async function submitQuizAnswers(quizId, answersData) {
-  const url = `${API_BASE_URL}/quizzes/${quizId}/grade`;
-  const res = await fetch(url, {
+  return request(`${API_BASE_URL}/quizzes/${quizId}/grade`, {
     method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json' 
-    },
-    credentials: 'include',
-    body: JSON.stringify({ answers: answersData })
+    headers: jsonHeaders,
+    body: JSON.stringify({ answers: answersData }),
   });
-  return handleResponse(res);
 }
-
 
 // Fetch all quizzes for the list view
 export async function getMyQuizzes() {
-  const url = `${API_BASE_URL}/quizzes`;
-  const res = await fetch(url, { method: 'GET', credentials: 'include' });
-  return handleResponse(res);
+  return request(`${API_BASE_URL}/quizzes`, { method: 'GET' });
 }
 
 // Fetch a single sanitized quiz to take it
 export async function getQuizById(quizId) {
-  const url = `${API_BASE_URL}/quizzes/${quizId}`;
-  const res = await fetch(url, { method: 'GET', credentials: 'include' });
-  return handleResponse(res);
+  return request(`${API_BASE_URL}/quizzes/${quizId}`, { method: 'GET' });
 }

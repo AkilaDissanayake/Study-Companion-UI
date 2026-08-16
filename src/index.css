@@ -1,32 +1,150 @@
 :root {
-  --bg-color: #ffffff;
-  --text-color: #333333;
-  --container-bg: #f8f9fa;
-  --sidebar-bg: #2c3e50;
-  --sidebar-text: #ffffff;
-  --border-color: #e9ecef;
-  --primary: #007bff;
-  --primary-hover: #0056b3;
+  /* ---- Color: accent (desaturated indigo-blue — calm, focus-associated) ---- */
+  --color-primary-50: #EEF1FD;
+  --color-primary-100: #DCE2FB;
+  --color-primary-200: #B9C5F7;
+  --color-primary-500: #4C63DE;
+  --color-primary-600: #3B4FC4;
+  --color-primary-700: #2E3E9C;
+
+  /* ---- Color: neutrals (cool/blue-tinted, light mode) ---- */
+  --color-bg: #FBFBFD;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F4F5F9;
+  --color-border: #E2E5EA;
+  --color-border-strong: #CBD0D8;
+  --color-text-primary: #22252B;
+  --color-text-secondary: #6C7280;
+  --color-text-tertiary: #6E737B; /* WCAG AA fix: was #9AA1AC at 2.52:1 (failed even AA) */
+
+  /* ---- Color: sidebar (deep neutral, tied to the accent ramp) ----
+     Sidebar is intentionally dark in BOTH app themes, so its text tokens are
+     theme-invariant by design — muted text is defined once here and never
+     overridden under [data-theme="dark"], otherwise it regresses contrast
+     when the user switches to dark mode. */
+  --color-sidebar-bg: #14161A;
+  --color-sidebar-surface-hover: rgba(255, 255, 255, 0.06);
+  --color-sidebar-text: #F4F5F9;
+  --color-sidebar-text-muted: #9CA3AE; /* WCAG AAA: 7.13:1 vs light-root sidebar-bg, 7.65:1 vs dark-override sidebar-bg */
+  --color-sidebar-border: rgba(255, 255, 255, 0.08);
+
+  /* ---- Color: semantic ---- */
+  --color-success: #147D57; /* WCAG AA fix: was #1A9C6D at 3.09:1 on success-bg (failed AA) */
+  --color-success-bg: #E4F5EE;
+  --color-danger: #C03E3E; /* WCAG AA fix: was #D64545 at 3.77:1 on danger-bg (failed AA) */
+  --color-danger-bg: #FBEAEA;
+  --color-warning: #9E6015; /* WCAG AA fix: was #C97A1B at 2.97:1 on warning-bg (failed AA) */
+  --color-warning-bg: #FBF0E1;
+  --color-info: var(--color-primary-500);
+  --color-info-bg: var(--color-primary-50);
+
+  /* ---- Typography ---- */
+  --font-body: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --font-display: 'Lexend', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --font-size-display: 40px;
+  --font-size-h1: 28px;
+  --font-size-h2: 22px;
+  --font-size-h3: 18px;
+  --font-size-body: 15px;
+  --font-size-body-sm: 13px;
+  --font-size-caption: 12px;
+  --line-height-heading: 1.2;
+  --line-height-body: 1.6;
+
+  /* ---- Spacing (4px base) ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 48px;
+  --space-10: 64px;
+
+  /* ---- Radius ---- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 999px;
+
+  /* ---- Shadow (border-first elevation; shadows mainly for overlays) ---- */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.10);
+  --shadow-lg: 0 16px 48px rgba(15, 23, 42, 0.16);
+
+  /* ---- Motion ---- */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 [data-theme="dark"] {
-  --bg-color: #121212;
-  --text-color: #f4f4f4;
-  --container-bg: #1e1e1e;
-  --sidebar-bg: #1a1a1a;
-  --sidebar-text: #f4f4f4;
-  --border-color: #333333;
-  --primary: #375a7f;
-  --primary-hover: #2b4764;
+  --color-bg: #101114;
+  --color-surface: #17181C;
+  --color-surface-hover: #1E2025;
+  --color-border: #2A2C33;
+  --color-border-strong: #3A3D46;
+  --color-text-primary: #EDEEF1;
+  --color-text-secondary: #A6AAB4;
+  --color-text-tertiary: #A8AAAF; /* WCAG AAA fix: was #74777F at 4.21:1 vs bg (failed AAA) */
+
+  --color-sidebar-bg: #0C0D10;
+  --color-sidebar-surface-hover: rgba(255, 255, 255, 0.06);
+  --color-sidebar-text: #EDEEF1;
+  /* --color-sidebar-text-muted intentionally NOT overridden here — see :root definition */
+  --color-sidebar-border: rgba(255, 255, 255, 0.06);
+
+  --color-primary-500: #6478E5;
+  --color-primary-600: #7E90EA;
+  --color-primary-700: #B9C5F7;
+
+  --color-success: #34C98C;
+  --color-success-bg: rgba(52, 201, 140, 0.12);
+  --color-danger: #EB8787; /* WCAG AAA fix: was #E77272 at 6.34:1 vs bg (failed AAA) */
+  --color-danger-bg: rgba(231, 114, 114, 0.12);
+  --color-warning: #E0A34E;
+  --color-warning-bg: rgba(224, 163, 78, 0.12);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.32);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.40);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.48);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: var(--bg-color);
-  color: var(--text-color);
+  font-family: var(--font-body);
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
   margin: 0;
   height: 100vh;
   display: flex;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  line-height: var(--line-height-heading);
+  margin: 0;
+}
+
+h1 { font-size: var(--font-size-h1); font-weight: 650; }
+h2 { font-size: var(--font-size-h2); font-weight: 600; }
+h3 { font-size: var(--font-size-h3); font-weight: 600; }
+
+p {
+  line-height: var(--line-height-body);
 }
 
 /* Centered Card (For Login & Setup) */
@@ -39,14 +157,68 @@ body {
 }
 
 .card {
-  background-color: var(--container-bg);
-  padding: 30px;
-  border-radius: 10px;
-  border: 1px solid var(--border-color);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  background-color: var(--color-surface);
+  padding: var(--space-8);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
   text-align: center;
-  width: 350px;
+  width: 380px;
   position: relative;
+}
+
+/* Auth screens (Login / Setup) — branding panel + centered form */
+.auth-shell {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+}
+
+.auth-branding {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: linear-gradient(160deg, var(--color-primary-700) 0%, var(--color-primary-500) 55%, var(--color-primary-600) 100%);
+}
+
+.auth-branding-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.18), transparent 60%);
+}
+
+.auth-branding-hero {
+  position: relative;
+  z-index: 1;
+  width: 220px;
+  height: auto;
+  filter: hue-rotate(-40deg) saturate(1.15) brightness(1.05) drop-shadow(0 20px 40px rgba(0, 0, 0, 0.25));
+}
+
+.auth-branding-copy {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  margin-top: var(--space-8);
+  padding: 0 var(--space-6);
+}
+
+.auth-form-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+}
+
+@media (max-width: 860px) {
+  .auth-branding {
+    display: none;
+  }
 }
 
 /* Dashboard Layout */
@@ -59,23 +231,22 @@ body {
 /* Sidebar & Collapse Animations */
 .sidebar {
   width: 250px;
-  background-color: var(--sidebar-bg);
-  color: var(--sidebar-text);
+  background-color: var(--color-sidebar-bg);
+  color: var(--color-sidebar-text);
   display: flex;
   flex-direction: column;
-  transition: width 0.3s ease; /* Animates the width change */
+  transition: width var(--duration-slow) var(--ease-standard);
   overflow: hidden; /* Hides text that overflows when shrinking */
+  flex-shrink: 0;
 }
 
 /* The state applied when isCollapsed is true */
 .sidebar.collapsed {
-  width: 60px; /* Shrinks the background and container */
+  width: 68px; /* Shrinks the background and container */
 }
 
 .sidebar h2 {
-  text-align: center;
-  padding: 20px 0;
-  margin: 0;
+  font-size: var(--font-size-h3);
   white-space: nowrap; /* Prevents title wrapping during animation */
 }
 
@@ -83,8 +254,10 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-sidebar-border);
+  min-height: 60px;
+  box-sizing: border-box;
 }
 
 /* Sidebar List */
@@ -95,138 +268,74 @@ body {
 }
 
 .sidebar li {
-  padding: 15px 20px;
-  cursor: pointer;
-  transition: background 0.2s;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: var(--font-size-body-sm);
+  font-weight: 500;
   white-space: nowrap; /* Keeps text on one line while shrinking */
-}
-
-.sidebar li:hover, .sidebar li.active {
-  background-color: rgba(255,255,255,0.15);
-  border-left: 4px solid #3498db;
 }
 
 .main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background-color: var(--bg-color);
+  background-color: var(--color-bg);
+  min-width: 0;
 }
 
 .topbar {
   height: 60px;
-  background-color: var(--container-bg);
-  border-bottom: 1px solid var(--border-color);
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
-  padding: 0 20px;
+  padding: 0 var(--space-6);
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 /* Google-style Avatar */
 .avatar {
   width: 40px;
   height: 40px;
-  border-radius: 50%;
-  background-color: var(--primary);
+  border-radius: var(--radius-full);
+  background-color: var(--color-primary-500);
   color: white;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 20px;
-  font-weight: bold;
+  font-size: 18px;
+  font-family: var(--font-display);
+  font-weight: 600;
   cursor: pointer;
-}
-
-.content-area {
-  padding: 30px;
-  flex: 1;
-  overflow-y: auto;
-}
-
-/* Forms & Inputs */
-input[type="text"], select, button {
-  width: 100%;
-  padding: 10px;
-  margin-top: 10px;
-  border-radius: 5px;
-  border: 1px solid var(--border-color);
-  background-color: var(--bg-color);
-  color: var(--text-color);
-  box-sizing: border-box;
-}
-
-button {
-  background-color: var(--primary);
-  color: white;
-  border: none;
-  cursor: pointer;
-  font-weight: bold;
-  transition: background 0.2s;
-}
-
-button:hover { background-color: var(--primary-hover); }
-
-/* Setup Window Close Button */
-.close-btn {
-  position: absolute;
-  top: 10px;
-  right: 15px;
-  background: none;
-  color: var(--text-color);
-  font-size: 20px;
-  width: auto;
-  padding: 0;
-  margin: 0;
-}
-.close-btn:hover { background: none; color: red; }
-
-/* Fixed Toggle Button for Sidebar */
-.toggle-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 24px;
-  color: var(--sidebar-text); /* Matches sidebar text instead of being dark grey */
-  padding: 5px 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: auto; /* Overrides the 100% width on global buttons */
-  margin: 0; /* Overrides global button margin */
-}
-
-.toggle-btn:hover {
-  background-color: rgba(255,255,255,0.1); /* Subtle hover effect */
 }
 
 /* Popup Overlay */
 .popup-overlay {
   position: fixed;
   top: 0; left: 0; width: 100vw; height: 100vh;
-  background: rgba(0,0,0,0.5);
+  background: rgba(15, 17, 21, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  animation: fadeIn 0.3s;
+  animation: fadeIn var(--duration-base) var(--ease-standard);
 }
 
 .popup-card {
-  background-color: #28a745;
+  background-color: var(--color-success);
   color: white;
-  padding: 20px 40px;
-  border-radius: 8px;
+  padding: var(--space-5) var(--space-8);
+  border-radius: var(--radius-lg);
   font-size: 1.2rem;
-  font-weight: bold;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  font-weight: 700;
+  box-shadow: var(--shadow-lg);
 }
+
 .content-area {
   flex: 1; /* Takes up all space under the Topbar */
-  padding: 20px;
+  padding: var(--space-6);
   overflow-y: auto; /* Handles standard scrolling for other tabs */
-  
+
   /* CRITICAL ADDITIONS FOR CHAT LAYOUT: */
   display: flex;
   flex-direction: column;
@@ -250,22 +359,12 @@ button:hover { background-color: var(--primary-hover); }
 }
 
 .chat-scroll-area::-webkit-scrollbar-thumb {
-  background-color: #d1d5db; /* A soft gray */
-  border-radius: 10px;
+  background-color: var(--color-border-strong);
+  border-radius: var(--radius-full);
 }
 
 .chat-scroll-area::-webkit-scrollbar-thumb:hover {
-  background-color: #9ca3af; /* Darkens slightly when hovered */
-}
-
-/* Optional: Dark mode adjustments if you use dark mode variables */
-@media (prefers-color-scheme: dark) {
-  .chat-scroll-area::-webkit-scrollbar-thumb {
-    background-color: #4b5563;
-  }
-  .chat-scroll-area::-webkit-scrollbar-thumb:hover {
-    background-color: #6b7280;
-  }
+  background-color: var(--color-text-tertiary);
 }
 
 /* Hide scrollbar for the chat input */
@@ -278,3 +377,25 @@ button:hover { background-color: var(--primary-hover); }
   scrollbar-width: none;  /* Firefox */
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+.skeleton-pulse {
+  display: inline-block;
+  background: var(--color-surface-hover);
+  border-radius: var(--radius-sm);
+  animation: skeletonPulse var(--duration-slow) var(--ease-standard) infinite;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes toastOut {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(20px); }
+}

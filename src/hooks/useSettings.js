@@ -10,12 +10,21 @@
 
 import { useState } from 'react';
 import * as api from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { useNotify } from '../context/NotificationContext';
 
 export function useSettings(initialTheme = 'light', initialLanguage = 'english') {
+  const { userId } = useAuth();
+  const notify = useNotify();
   const [theme, setTheme] = useState(initialTheme);
   const [language, setLanguage] = useState(initialLanguage);
 
-  const applyTheme = (t) => document.documentElement.setAttribute('data-theme', t);
+  const applyTheme = (t) => {
+    document.documentElement.setAttribute('data-theme', t);
+    // Cached so main.jsx can apply it synchronously on the next page load,
+    // before the async config fetch resolves — avoids a flash of the wrong theme.
+    localStorage.setItem('theme', t);
+  };
 
   /**
    * Saves the current (or default) preferences to the backend.
@@ -26,19 +35,18 @@ export function useSettings(initialTheme = 'light', initialLanguage = 'english')
     const finalLanguage = isSkip ? 'english' : language;
 
     try {
-      const res = await api.saveUserConfig({
+      // Backend's ConfigPayload requires `filename` — the user's config is stored as `{user_id}.json`
+      await api.saveUserConfig({
+        filename: `${userId}.json`,
         data: { theme: finalTheme, language: finalLanguage },
       }, isSkip);
 
-      if (res.ok) {
-        applyTheme(finalTheme);
-        return true;
-      } else {
-        alert('Failed to save configuration.');
-        return false;
-      }
+      applyTheme(finalTheme);
+      return true;
     } catch (error) {
-      console.error('Config Error:', error);
+      notify.error(error.message || 'Failed to save configuration.', {
+        retry: () => handleSavePreferences(isSkip),
+      });
       return false;
     }
   };

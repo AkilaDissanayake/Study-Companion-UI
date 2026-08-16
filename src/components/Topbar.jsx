@@ -1,91 +1,93 @@
 /**
  * @file Topbar.jsx
- * @description The top navigation bar of the application. 
- * Houses the user's avatar and the dropdown menu for logging out.
+ * @description The top navigation bar of the application.
+ * Shows the current page title and houses the user's avatar / logout menu.
  */
 
 import React, { useRef, useEffect } from 'react';
+import { LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import Avatar from './ui/Avatar';
 
-export default function Topbar({ showProfileMenu, setShowProfileMenu }) {
-  const { userName, logout } = useAuth(); 
-  
-  // 1. Create a reference to the dropdown container
-  const menuRef = useRef(null); 
+export default function Topbar({ title, showProfileMenu, setShowProfileMenu }) {
+  const { userName, logout } = useAuth();
 
-  // 2. Set up the click listener for closing the menu
+  const menuRef = useRef(null);
+
   useEffect(() => {
     function handleClickOutside(event) {
-      // If the menu is open AND the click happened outside the menuRef container...
       if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setShowProfileMenu(false); // ...close the menu!
+        setShowProfileMenu(false);
       }
     }
-
-    // Attach the event listener to the entire document
-    document.addEventListener("mousedown", handleClickOutside);
-    
-    // Clean up the event listener when the component unmounts
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [setShowProfileMenu]); 
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [setShowProfileMenu]);
 
   return (
     <div className="topbar">
-      {/* 3. zIndex: 999 keeps the menu above the ChatTab background */}
-      <div style={{ position: "relative", zIndex: 999 }} ref={menuRef}>
-        
-        <div 
-          className="avatar" 
-          title={`Logged in as ${userName}`}
-          onClick={() => setShowProfileMenu(!showProfileMenu)}
-          style={{ cursor: "pointer" }}
-        >
-            {userName ? userName.charAt(0).toUpperCase() : 'U'}
+      <h1 style={{ fontSize: 'var(--font-size-h2)' }}>{title}</h1>
+
+      <div style={{ position: 'relative', zIndex: 999 }} ref={menuRef}>
+        <div onClick={() => setShowProfileMenu(!showProfileMenu)} style={{ cursor: 'pointer' }}>
+          <Avatar name={userName} />
         </div>
 
-        {/* 4. Dropdown Menu styled to anchor to the right edge */}
         {showProfileMenu && (
-          <div 
-            className="dropdown-menu" 
+          <div
             style={{
               position: 'absolute',
-              right: 0,             // Anchors to the right side to prevent off-screen overflow
-              top: '100%',          // Starts exactly at the bottom of the avatar container
-              marginTop: '12px',    // Adds a nice visual gap below the avatar
-              minWidth: '160px',    // Gives enough width for the user's name
-              backgroundColor: 'var(--container-bg)', // Adapts to light/dark themes
-              border: '1px solid var(--border-color)',
-              borderRadius: '8px',
-              padding: '12px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+              right: 0,
+              top: '100%',
+              marginTop: '12px',
+              minWidth: '190px',
+              backgroundColor: 'var(--color-surface)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-lg)',
+              padding: 'var(--space-3)',
+              boxShadow: 'var(--shadow-md)',
             }}
           >
-            <p style={{ 
-              margin: '0 0 10px 0', 
-              textAlign: 'center', 
-              fontWeight: 'bold',
-              color: 'var(--text-color)' 
-            }}>
+            <p
+              style={{
+                margin: '0 0 var(--space-3) 0',
+                textAlign: 'center',
+                fontWeight: 600,
+                color: 'var(--color-text-primary)',
+              }}
+            >
               {userName}
             </p>
-            <button 
-              onClick={logout} 
-              style={{ 
-                backgroundColor: '#dc3545', 
-                color: 'white', 
-                width: '100%', 
-                padding: '8px 0', 
-                border: 'none', 
+            <button
+              onClick={logout}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 'var(--space-2)',
+                backgroundColor: 'var(--color-danger-bg)',
+                color: 'var(--color-danger)',
+                width: '100%',
+                padding: '8px 0',
+                border: 'none',
                 cursor: 'pointer',
-                borderRadius: '4px',
-                fontWeight: 'bold',
-                transition: 'background-color 0.2s'
+                borderRadius: 'var(--radius-md)',
+                fontWeight: 600,
+                fontSize: 'var(--font-size-body-sm)',
+                fontFamily: 'var(--font-body)',
+                margin: 0,
+                transition: 'background-color var(--duration-base) var(--ease-standard)',
               }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#c82333'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#dc3545'}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--color-danger)';
+                e.currentTarget.style.color = '#ffffff';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--color-danger-bg)';
+                e.currentTarget.style.color = 'var(--color-danger)';
+              }}
             >
+              <LogOut size={15} />
               Sign Out
             </button>
           </div>

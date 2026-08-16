@@ -15,6 +15,7 @@ const AuthContext = createContext();
 export function AuthProvider({ children }) {
   const [userId, setUserId] = useState('');
   const [userName, setUserName] = useState(localStorage.getItem('userName') || 'User');
+  const [userEmail, setUserEmail] = useState('');
   const [isLoading, setIsLoading] = useState(true); // Helps prevent flashing the login screen
 
   useEffect(() => {
@@ -22,6 +23,11 @@ export function AuthProvider({ children }) {
       try {
         const data = await api.checkAuthSession();
         setUserId(data.user_id);
+        if (data.email) setUserEmail(data.email);
+        if (data.name) {
+          setUserName(data.name);
+          localStorage.setItem('userName', data.name);
+        }
       } catch (err) {
 
         console.log("No active session found.");
@@ -33,13 +39,15 @@ export function AuthProvider({ children }) {
   }, []);
 
   /**
-   * Updates the global state after a successful Google login.
+   * Updates the global state after a successful login (Google or email/password).
    * @param {string} id - The unique user ID from the backend.
-   * @param {string} name - The user's display name from Google.
+   * @param {string} name - The user's display name.
+   * @param {string} [email] - The user's email address, when available.
    */
-  const login = (id, name) => {
+  const login = (id, name, email = '') => {
     setUserId(id);
     setUserName(name);
+    setUserEmail(email);
     localStorage.setItem('userName', name);
   };
 
@@ -51,6 +59,19 @@ export function AuthProvider({ children }) {
     }
     setUserId('');
     setUserName('User');
+    setUserEmail('');
+    localStorage.removeItem('userName');
+  };
+
+  /**
+   * Purely-local session reset, used when the backend has already told us
+   * the session is dead (401/403) — unlike logout(), this never calls the
+   * backend, avoiding a redundant (and itself 401-prone) network round-trip.
+   */
+  const clearSession = () => {
+    setUserId('');
+    setUserName('User');
+    setUserEmail('');
     localStorage.removeItem('userName');
   };
 
@@ -58,9 +79,11 @@ export function AuthProvider({ children }) {
   const value = {
     userId,
     userName,
+    userEmail,
     isLoading,
     login,
-    logout
+    logout,
+    clearSession
   };
 
   return (

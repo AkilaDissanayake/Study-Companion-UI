@@ -1,88 +1,71 @@
 /**
  * @file App.jsx
  * @description Root application component. Responsible ONLY for:
- *  1. Reading auth state from context
- *  2. Routing between Login, Setup, and Dashboard views
- *  3. Handling the Google OAuth callback
+ *  1. Declaring the route table (public auth pages vs protected pages)
+ *  2. Wiring the api.js 401/403 bridge into the notification + auth context
  *
- * All business logic (file management, settings, chat) lives in the relevant
- * page/component or custom hook.
+ * All auth business logic (Google callback, email/password login, signup,
+ * verification, password reset) lives in the relevant page component.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
+import Signup from './pages/Signup';
+import VerifyEmail from './pages/VerifyEmail';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Setup from './pages/Setup';
 import Dashboard from './pages/Dashboard';
+import ProtectedRoute from './components/ProtectedRoute';
+import PublicOnlyRoute from './components/PublicOnlyRoute';
 import { useAuth } from './context/AuthContext';
+import { useNotify } from './context/NotificationContext';
 import * as api from './services/api';
 
-/** Decodes the name claim from a Google JWT without any library. */
-function decodeJwt(token) {
-  try {
-    return JSON.parse(atob(token.split('.')[1]));
-  } catch {
-    return { name: 'User' };
-  }
-}
-
 function App() {
-  const { userId, isLoading, login } = useAuth();
+  const { userId, clearSession } = useAuth();
+  const notify = useNotify();
 
-  const [view, setView] = useState('login');
-  const [showPopup, setShowPopup] = useState(false);
+  // Dedupes a burst of concurrent 401s (from several in-flight requests) down
+  // to a single "session expired" toast, instead of one per request.
+  const hasHandledExpiryRef = useRef(false);
 
-  // Redirect to dashboard once the auth context resolves a session
+  // A fresh login re-arms the 401 guard so a later session expiry can toast again.
   useEffect(() => {
-    if (userId) {
-      setView('dashboard');
-    } else if (!isLoading) {
-      setView('login');
-    }
-  }, [userId, isLoading]);
+    if (userId) hasHandledExpiryRef.current = false;
+  }, [userId]);
 
-  const handleGoogleSuccess = async (credentialResponse) => {
-    const googleToken = credentialResponse.credential;
-    const decodedName = decodeJwt(googleToken).name || 'User';
+  // One-time bridge: api.js is a plain module with no React context access,
+  // so it calls back into this handler (registered once here) whenever any
+  // request comes back 401/403.
+  useEffect(() => {
+    api.registerApiHandlers({
+      onUnauthorized: () => {
+        if (hasHandledExpiryRef.current) return;
+        hasHandledExpiryRef.current = true;
+        notify.warning('Session expired. Please log in again.');
+        clearSession();
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    try {
-      const payload = await api.loginWithGoogle(googleToken);
+  return (
+    <Routes>
+      <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+      <Route path="/signup" element={<PublicOnlyRoute><Signup /></PublicOnlyRoute>} />
+      <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPassword /></PublicOnlyRoute>} />
+      <Route path="/reset-password" element={<PublicOnlyRoute><ResetPassword /></PublicOnlyRoute>} />
+      {/* Verify-email must work whether or not the user happens to be logged in elsewhere. */}
+      <Route path="/verify-email" element={<VerifyEmail />} />
 
-      login(payload.user_id, decodedName);
+      <Route path="/setup" element={<ProtectedRoute><Setup /></ProtectedRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
 
-      setShowPopup(true);
-      setTimeout(() => setShowPopup(false), 2000);
-
-      if (!payload.config?.language) {
-        setView('setup');
-      } else {
-        document.documentElement.setAttribute('data-theme', payload.config.theme || 'light');
-        setView('dashboard');
-      }
-    } catch (error) {
-      console.error('Login Error:', error);
-      alert('Failed to log in. Please try again.');
-    }
-  };
-
-  // Prevent flashing the login screen while the session check is in-flight
-  if (isLoading) {
-    return <div className="center-wrapper">Loading...</div>;
-  }
-
-  if (view === 'login') {
-    return <Login onLoginSuccess={handleGoogleSuccess} />;
-  }
-
-  if (view === 'setup') {
-    return (
-      <Setup
-        showPopup={showPopup}
-        onSetupComplete={() => setView('dashboard')}
-      />
-    );
-  }
-
-  return <Dashboard showPopup={showPopup} />;
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
+  );
 }
 
 export default App;

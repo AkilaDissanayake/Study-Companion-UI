@@ -5,8 +5,29 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import {
+  PanelLeftClose,
+  PanelLeftOpen,
+  ClipboardList,
+  MessageSquare,
+  FolderOpen,
+  Settings as SettingsIcon,
+  SquarePen,
+  MoreVertical,
+  Wand2,
+  Trash2,
+} from 'lucide-react';
 import { getSidebarChats, deleteChatSession, generateChatQuiz } from '../services/api';
+import { useNotify } from '../context/NotificationContext';
 import ConfirmDialog from './ConfirmDialog';
+import IconButton from './ui/IconButton';
+
+const NAV_ITEMS = [
+  { tab: 'quizzes', label: 'My Quizzes', icon: ClipboardList },
+  { tab: 'chat', label: 'AI Tutor', icon: MessageSquare },
+  { tab: 'files', label: 'My Files', icon: FolderOpen },
+  { tab: 'settings', label: 'Settings', icon: SettingsIcon },
+];
 
 export default function Sidebar({
   activeTab,
@@ -18,6 +39,7 @@ export default function Sidebar({
   setActiveQuizId,
   refreshTrigger,
 }) {
+  const notify = useNotify();
   const [chatHistory, setChatHistory] = useState([]);
 
   // Delete confirmation
@@ -46,7 +68,7 @@ export default function Sidebar({
       const res = await getSidebarChats();
       if (res.data) setChatHistory(res.data);
     } catch (err) {
-      console.error('Failed to load sidebar chats:', err);
+      notify.error(err.message || 'Could not load your chat history.', { retry: fetchChats });
     }
   };
 
@@ -67,8 +89,9 @@ export default function Sidebar({
         setActiveTab('quizzes');
       }
     } catch (error) {
-      console.error('Failed to generate quiz:', error);
-      alert('Failed to generate quiz. Please try again.');
+      notify.error(error.message || 'Failed to generate quiz. Please try again.', {
+        retry: () => handleGenerateQuiz(e, chat),
+      });
     }
   };
 
@@ -88,26 +111,28 @@ export default function Sidebar({
       }
       await fetchChats();
     } catch (err) {
-      console.error('Failed to delete chat:', err);
+      notify.error(err.message || 'Failed to delete chat. Please try again.');
     } finally {
       setIsConfirmOpen(false);
       setChatToDelete(null);
     }
   };
 
-  // ── Shared nav item style helpers ─────────────────────────────────────
+  // ── Shared nav item style helper ────────────────────────────────────
 
   const navItemStyle = (tab) => ({
-    padding: '15px 20px',
+    padding: isCollapsed ? '12px 0' : '10px 16px',
+    margin: '2px 8px',
     cursor: 'pointer',
-    transition: 'background 0.2s',
-    borderBottom: '1px solid rgba(255,255,255,0.05)',
+    borderRadius: 'var(--radius-md)',
+    transition: `background-color var(--duration-base) var(--ease-standard)`,
     whiteSpace: 'nowrap',
     display: 'flex',
-    justifyContent: 'space-between',
+    justifyContent: isCollapsed ? 'center' : 'space-between',
     alignItems: 'center',
-    backgroundColor: activeTab === tab ? 'rgba(255,255,255,0.15)' : 'transparent',
-    borderLeft: activeTab === tab ? '4px solid #3498db' : '4px solid transparent',
+    gap: 'var(--space-3)',
+    backgroundColor: activeTab === tab ? 'var(--color-sidebar-surface-hover)' : 'transparent',
+    color: activeTab === tab ? 'var(--color-sidebar-text)' : 'var(--color-sidebar-text-muted)',
   });
 
   return (
@@ -122,274 +147,170 @@ export default function Sidebar({
       <div className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
         {/* ── Header ── */}
         <div className="sidebar-header">
-          {!isCollapsed && <h2 style={{ margin: 0 }}>Study Companion</h2>}
-          <button
-            className="toggle-btn"
-            onClick={() => setIsCollapsed(!isCollapsed)}
+          {!isCollapsed && <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', color: 'var(--color-sidebar-text)' }}>Study Companion</h2>}
+          <IconButton
+            variant="sidebar"
             aria-label="Toggle sidebar"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              style={{ width: '24px', height: '24px' }}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-              />
-            </svg>
-          </button>
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            icon={isCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
+          />
         </div>
 
         {/* ── Navigation ── */}
-        <ul>
-          {/* My Quizzes */}
-          <li
-            style={navItemStyle('quizzes')}
-            onClick={() => {
-              setActiveTab('quizzes');
-              if (setActiveQuizId) setActiveQuizId(null);
-            }}
-          >
-            {!isCollapsed && <span>My Quizzes</span>}
-          </li>
-
-          {/* AI Tutor */}
-          <li
-            style={navItemStyle('chat')}
-            onClick={() => setActiveTab('chat')}
-          >
-            <span>{!isCollapsed && 'AI Tutor'}</span>
-            {activeTab === 'chat' && !isCollapsed && (
-              <span
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActiveSessionId(null);
+        <ul style={{ padding: '8px 0' }}>
+          {NAV_ITEMS.map(({ tab, label, icon: Icon }) => (
+            <React.Fragment key={tab}>
+              <li
+                style={navItemStyle(tab)}
+                title={isCollapsed ? label : undefined}
+                onClick={() => {
+                  setActiveTab(tab);
+                  if (tab === 'quizzes' && setActiveQuizId) setActiveQuizId(null);
                 }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#a0aec0',
-                  cursor: 'pointer',
-                  padding: '4px',
-                }}
-                title="New Chat"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2.5}
-                  stroke="currentColor"
-                  style={{ width: '18px', height: '18px' }}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-              </span>
-            )}
-          </li>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', overflow: 'hidden' }}>
+                  <Icon size={18} style={{ flexShrink: 0 }} />
+                  {!isCollapsed && <span>{label}</span>}
+                </span>
 
-          {/* Chat history sub-list */}
-          {activeTab === 'chat' && !isCollapsed && chatHistory.length > 0 && (
-            <ul
-              style={{
-                padding: '0 0 0 8px',
-                margin: '8px 0 16px 8px',
-                fontSize: '0.85em',
-                listStyleType: 'none',
-                borderLeft: '1px solid #4a5568',
-              }}
-            >
-              {chatHistory.map((chat) => (
-                <li
-                  key={chat.session_id}
-                  onClick={() => setActiveSessionId(chat.session_id)}
-                  title={chat.title || 'Chat Session'}
-                  style={{
-                    padding: '8px 12px',
-                    margin: '4px 0',
-                    cursor: 'pointer',
-                    borderRadius: '6px',
-                    backgroundColor:
-                      activeSessionId === chat.session_id
-                        ? 'rgba(255, 255, 255, 0.15)'
-                        : 'transparent',
-                    color: '#ffffff',
-                    display: 'grid',
-                    gridTemplateColumns: '1fr auto',
-                    alignItems: 'center',
-                    gap: '8px',
-                    boxSizing: 'border-box',
-                    textAlign: 'left',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (activeSessionId !== chat.session_id)
-                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
-                  }}
-                  onMouseLeave={(e) => {
-                    if (activeSessionId !== chat.session_id)
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                  }}
-                >
-                  {/* Title */}
-                  <div
-                    style={{
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      fontWeight: activeSessionId === chat.session_id ? '600' : 'normal',
+                {tab === 'chat' && activeTab === 'chat' && !isCollapsed && (
+                  <IconButton
+                    variant="sidebar"
+                    size={28}
+                    title="New Chat"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveSessionId(null);
                     }}
-                  >
-                    {chat.title?.trim() ? chat.title : 'New Chat'}
-                  </div>
+                    icon={<SquarePen size={16} />}
+                  />
+                )}
+              </li>
 
-                  {/* Three-dot menu */}
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                    <button
-                      onClick={(e) => toggleMenu(e, chat.session_id)}
+              {/* Chat history sub-list — rendered directly under the AI Tutor item */}
+              {tab === 'chat' && activeTab === 'chat' && !isCollapsed && chatHistory.length > 0 && (
+                <ul
+                  style={{
+                    padding: '0 0 0 8px',
+                    margin: '8px 8px 16px 20px',
+                    fontSize: 'var(--font-size-body-sm)',
+                    listStyleType: 'none',
+                    borderLeft: '1px solid var(--color-sidebar-border)',
+                  }}
+                >
+                  {chatHistory.map((chat) => (
+                    <li
+                      key={chat.session_id}
+                      onClick={() => setActiveSessionId(chat.session_id)}
+                      title={chat.title || 'Chat Session'}
                       style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#a0aec0',
+                        padding: '8px 8px 8px 12px',
+                        margin: '2px 0',
                         cursor: 'pointer',
-                        padding: '2px 4px',
-                        display: 'flex',
+                        borderRadius: 'var(--radius-sm)',
+                        backgroundColor:
+                          activeSessionId === chat.session_id
+                            ? 'var(--color-sidebar-surface-hover)'
+                            : 'transparent',
+                        color: 'var(--color-sidebar-text)',
+                        display: 'grid',
+                        gridTemplateColumns: '1fr auto',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'color 0.2s',
+                        gap: 'var(--space-2)',
+                        boxSizing: 'border-box',
+                        textAlign: 'left',
+                        transition: `background-color var(--duration-base) var(--ease-standard)`,
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = '#fff')}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = '#a0aec0')}
+                      onMouseEnter={(e) => {
+                        if (activeSessionId !== chat.session_id)
+                          e.currentTarget.style.backgroundColor = 'var(--color-sidebar-surface-hover)';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (activeSessionId !== chat.session_id)
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
                     >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth={2}
-                        stroke="currentColor"
-                        style={{ width: '20px', height: '20px' }}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"
-                        />
-                      </svg>
-                    </button>
-
-                    {/* Dropdown */}
-                    {openMenuId === chat.session_id && (
+                      {/* Title */}
                       <div
                         style={{
-                          position: 'absolute',
-                          right: 0,
-                          top: '100%',
-                          marginTop: '4px',
-                          backgroundColor: '#2d3748',
-                          borderRadius: '6px',
-                          boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
-                          minWidth: '150px',
-                          zIndex: 100,
+                          whiteSpace: 'nowrap',
                           overflow: 'hidden',
-                          border: '1px solid #4a5568',
+                          textOverflow: 'ellipsis',
+                          fontWeight: activeSessionId === chat.session_id ? '600' : 'normal',
                         }}
                       >
-                        <div
-                          onClick={(e) => handleGenerateQuiz(e, chat)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            padding: '10px 12px',
-                            cursor: 'pointer',
-                            color: '#e2e8f0',
-                            transition: 'background 0.2s',
-                          }}
-                          onMouseEnter={(e) =>
-                            (e.currentTarget.style.backgroundColor = '#4a5568')
-                          }
-                          onMouseLeave={(e) =>
-                            (e.currentTarget.style.backgroundColor = 'transparent')
-                          }
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth={1.5}
-                            stroke="currentColor"
-                            style={{ width: '16px', height: '16px', marginRight: '8px' }}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
-                            />
-                          </svg>
-                          Generate Quiz
-                        </div>
-
-                        <div
-                          onClick={(e) => handleDeleteClick(e, chat)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            padding: '10px 12px',
-                            cursor: 'pointer',
-                            color: '#fc8181',
-                            borderTop: '1px solid #4a5568',
-                            transition: 'background 0.2s',
-                          }}
-                          onMouseEnter={(e) =>
-                            (e.currentTarget.style.backgroundColor = '#4a5568')
-                          }
-                          onMouseLeave={(e) =>
-                            (e.currentTarget.style.backgroundColor = 'transparent')
-                          }
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth={1.5}
-                            stroke="currentColor"
-                            style={{ width: '16px', height: '16px', marginRight: '8px' }}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-                            />
-                          </svg>
-                          Delete
-                        </div>
+                        {chat.title?.trim() ? chat.title : 'New Chat'}
                       </div>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
 
-          {/* My Files */}
-          <li
-            style={navItemStyle('files')}
-            onClick={() => setActiveTab('files')}
-          >
-            {!isCollapsed && <span>My Files</span>}
-          </li>
+                      {/* Three-dot menu */}
+                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                        <IconButton
+                          variant="sidebar"
+                          size={26}
+                          onClick={(e) => toggleMenu(e, chat.session_id)}
+                          icon={<MoreVertical size={16} />}
+                        />
 
-          {/* Settings */}
-          <li
-            style={navItemStyle('settings')}
-            onClick={() => setActiveTab('settings')}
-          >
-            {!isCollapsed && <span>Settings</span>}
-          </li>
+                        {/* Dropdown */}
+                        {openMenuId === chat.session_id && (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              right: 0,
+                              top: '100%',
+                              marginTop: '4px',
+                              backgroundColor: 'var(--color-surface)',
+                              borderRadius: 'var(--radius-md)',
+                              boxShadow: 'var(--shadow-md)',
+                              minWidth: '170px',
+                              zIndex: 100,
+                              overflow: 'hidden',
+                              border: '1px solid var(--color-border)',
+                            }}
+                          >
+                            <div
+                              onClick={(e) => handleGenerateQuiz(e, chat)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '10px 12px',
+                                cursor: 'pointer',
+                                color: 'var(--color-text-primary)',
+                                transition: 'background-color var(--duration-base) var(--ease-standard)',
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)')}
+                              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                            >
+                              <Wand2 size={16} style={{ marginRight: '8px' }} />
+                              Generate Quiz
+                            </div>
+
+                            <div
+                              onClick={(e) => handleDeleteClick(e, chat)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '10px 12px',
+                                cursor: 'pointer',
+                                color: 'var(--color-danger)',
+                                borderTop: '1px solid var(--color-border)',
+                                transition: 'background-color var(--duration-base) var(--ease-standard)',
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-danger-bg)')}
+                              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                            >
+                              <Trash2 size={16} style={{ marginRight: '8px' }} />
+                              Delete
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </React.Fragment>
+          ))}
         </ul>
       </div>
     </>

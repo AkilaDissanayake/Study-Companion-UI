@@ -3,17 +3,23 @@
  * @description Unified tab for uploading files, creating subjects, and viewing documents.
  */
 import React, { useState } from 'react';
+import { Search, Folder, FolderOpen, FileText, X, ChevronDown, ChevronRight, RefreshCw, CheckCircle2, XCircle } from 'lucide-react';
+import Card from './ui/Card';
+import Button from './ui/Button';
+import IconButton from './ui/IconButton';
+import Modal from './ui/Modal';
+import { Input, Select } from './ui/Input';
 
 export default function FileManagerTab({
   isAddingSubject, selectedSubject, handleSubjectChange, subjects,
-  newSubject, setNewSubject, setSelectedFiles, setUploadStatus,
-  handleFileUpload, uploadStatus,
+  newSubject, setNewSubject, setSelectedFiles, resetUploadState,
+  handleFileUpload, uploadState, uploadProgress, uploadError, uploadedFolder,
   searchQuery, setSearchQuery, isLoadingFiles, uploadedFiles,
   expandedFolders, setExpandedFolders, handleDownload, initiateDelete, fetchUserFiles,
   handleGetFileUrl
 }) {
 
-  // --- NEW STATE FOR PREVIEW MODAL ---
+  // --- STATE FOR PREVIEW MODAL ---
   const [previewUrl, setPreviewUrl] = useState(null);
   const [previewName, setPreviewName] = useState("");
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
@@ -54,188 +60,223 @@ export default function FileManagerTab({
   return (
     <div style={{ maxWidth: '800px', position: 'relative' }}>
       <h2>File Manager</h2>
-      <p style={{ color: '#666' }}>Upload, organize, and manage your documents.</p>
-      
+      <p style={{ color: 'var(--color-text-secondary)', marginTop: 'var(--space-1)' }}>
+        Upload, organize, and manage your documents.
+      </p>
+
       {/* --- UPLOAD SECTION --- */}
-      <div style={{ backgroundColor: 'var(--container-bg)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '20px' }}>
-        <h3 style={{ marginTop: 0, marginBottom: '15px' }}>Upload New Document</h3>
-        <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+      <Card style={{ marginTop: 'var(--space-5)', marginBottom: 'var(--space-5)' }}>
+        <h3>Upload New Document</h3>
+        <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'flex-end', flexWrap: 'wrap', marginTop: 'var(--space-4)' }}>
             <div style={{ flex: 1, minWidth: '200px' }}>
-                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Target Folder:</label>
-                <select 
-                  value={isAddingSubject ? 'ADD_NEW' : selectedSubject}
-                  onChange={handleSubjectChange}
-                  style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)' }}
-                > 
+                <label style={{ fontWeight: 600, fontSize: 'var(--font-size-body-sm)', display: 'block', marginBottom: 'var(--space-2)' }}>
+                  Target Folder
+                </label>
+                <Select value={isAddingSubject ? 'ADD_NEW' : selectedSubject} onChange={handleSubjectChange}>
                   <option value="root">General</option>
                   {subjects.map((sub, index) => (
                     <option key={index} value={sub}>{sub}</option>
                   ))}
                   <option value="ADD_NEW">+ Add new subject...</option>
-                </select>
+                </Select>
 
                 {isAddingSubject && (
-                  <input 
-                    type="text" 
-                    placeholder="Type new subject name..." 
-                    value={newSubject}
-                    onChange={(e) => setNewSubject(e.target.value)}
-                    style={{ width: '100%', padding: '8px', marginTop: '10px', border: '1px solid var(--primary)', borderRadius: '4px' }}
-                  />
+                  <div style={{ marginTop: 'var(--space-2)' }}>
+                    <Input
+                      placeholder="Type new subject name..."
+                      value={newSubject}
+                      onChange={(e) => setNewSubject(e.target.value)}
+                      style={{ borderColor: 'var(--color-primary-500)' }}
+                    />
+                  </div>
                 )}
             </div>
 
             <div style={{ flex: 1, minWidth: '200px' }}>
-                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Select Files:</label>
-                <input 
-                  type="file" 
-                  multiple 
-                  onChange={(e) => { setSelectedFiles(e.target.files); setUploadStatus(''); }} 
-                  style={{ width: '100%', padding: '5px' }}
+                <label style={{ fontWeight: 600, fontSize: 'var(--font-size-body-sm)', display: 'block', marginBottom: 'var(--space-2)' }}>
+                  Select Files
+                </label>
+                <input
+                  type="file"
+                  multiple
+                  onChange={(e) => { setSelectedFiles(e.target.files); resetUploadState(); }}
+                  style={{ width: '100%', padding: '6px 0', margin: 0, border: 'none', background: 'none', color: 'var(--color-text-primary)' }}
                 />
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'flex-end', height: '100%', paddingTop: '28px' }}>
-                <button onClick={handleFileUpload} style={{ padding: '8px 20px', cursor: 'pointer' }}>Upload</button>
-            </div>
+            <Button onClick={handleFileUpload} disabled={uploadState === 'uploading'} isLoading={uploadState === 'uploading'}>
+              Upload
+            </Button>
         </div>
-        
-        {uploadStatus && (
-            <p style={{ marginTop: '15px', fontWeight: 'bold', color: uploadStatus.includes('Success') ? '#28a745' : '#dc3545' }}>
-                {uploadStatus}
+
+        {uploadState === 'uploading' && (
+          <div style={{ marginTop: 'var(--space-4)' }}>
+            <div
+              style={{
+                height: 6,
+                borderRadius: 'var(--radius-full)',
+                background: 'var(--color-surface-hover)',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  height: '100%',
+                  width: `${uploadProgress}%`,
+                  background: 'var(--color-primary-500)',
+                  borderRadius: 'var(--radius-full)',
+                  transition: `width var(--duration-slow) var(--ease-standard)`,
+                }}
+              />
+            </div>
+            <p style={{ marginTop: 'var(--space-2)', color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-body-sm)' }}>
+              Uploading… {uploadProgress}%
             </p>
+          </div>
         )}
-      </div>
+
+        {uploadState === 'success' && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-2)',
+              marginTop: 'var(--space-4)',
+              padding: 'var(--space-3) var(--space-4)',
+              background: 'var(--color-success-bg)',
+              border: '1px solid var(--color-success)',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            <CheckCircle2 size={18} color="var(--color-success)" style={{ flexShrink: 0 }} />
+            <p style={{ margin: 0, fontWeight: 600, color: 'var(--color-success)' }}>
+              Success! Files saved to {uploadedFolder}.
+            </p>
+          </div>
+        )}
+
+        {uploadState === 'error' && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-2)',
+              marginTop: 'var(--space-4)',
+              padding: 'var(--space-3) var(--space-4)',
+              background: 'var(--color-danger-bg)',
+              border: '1px solid var(--color-danger)',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            <XCircle size={18} color="var(--color-danger)" style={{ flexShrink: 0 }} />
+            <p style={{ margin: 0, fontWeight: 600, color: 'var(--color-danger)' }}>
+              {uploadError}
+            </p>
+          </div>
+        )}
+      </Card>
 
       {/* --- FILES VIEWER SECTION --- */}
-      <div style={{ backgroundColor: 'var(--container-bg)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-        
-                <div style={{ 
+      <Card>
+        <div style={{
             display: 'flex',
-            flexDirection: 'row',     /* Forces items to stay side-by-side */
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            marginBottom: '20px',
-            width: '100%',
-            boxSizing: 'border-box',
-            gap: '15px'               /* Adds a safe buffer between the title and the button */
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 'var(--space-5)',
+            gap: 'var(--space-4)'
         }}>
-            <h3 style={{ 
-                margin: 0, 
-                whiteSpace: 'nowrap', /* FIX 1: Absolutely forces "My Files" to stay on ONE line */
-                flexShrink: 0         /* Prevents the title from ever being squished */
-            }}>
-                My Files
-            </h3>
-            
-            <button 
-                onClick={fetchUserFiles} 
-                style={{ 
-                    
-                    padding: '6px 12px', 
-                    fontSize: '0.9em', 
-                    cursor: 'pointer', 
-                    color: 'white', 
-                    border: 'none', 
-                    borderRadius: '4px',
-                    margin: 0,
-                    width: 'auto',        /* FIX 2: Overrides any global CSS making the button 100% wide */
-                    whiteSpace: 'nowrap', /* Keeps button text on one line */
-                    flexShrink: 0         /* Prevents the button from being squished */
-                }}
-            >
-                Refresh List
-            </button>
+            <h3 style={{ flexShrink: 0 }}>My Files</h3>
+            <Button variant="secondary" size="sm" iconLeft={<RefreshCw size={14} />} onClick={fetchUserFiles}>
+              Refresh
+            </Button>
         </div>
+
         {/* Search Bar */}
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px', borderRadius: '4px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-color)', padding: '0 12px' }}>
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#888', marginRight: '8px', flexShrink: 0 }}>
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input 
-            type="text" 
-            placeholder="Search for any file by name..." 
+        <div style={{ marginBottom: 'var(--space-5)' }}>
+          <Input
+            iconLeft={<Search size={16} />}
+            placeholder="Search for any file by name..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ width: '100%', padding: '12px 0', border: 'none', outline: 'none', backgroundColor: 'transparent', color: 'var(--text-color)', fontSize: '1em' }}
           />
         </div>
 
         {isLoadingFiles ? (
-          <p>Loading your files...</p>
+          <p style={{ color: 'var(--color-text-secondary)' }}>Loading your files...</p>
         ) : (
           <div>
             {Object.entries(groupedFiles).map(([subject, files]) => {
               if (searchQuery && files.length === 0) return null;
+              const isExpanded = !!expandedFolders[subject];
 
               return (
-                <div key={subject} style={{ marginBottom: '10px' }}>
-                  <div 
+                <div key={subject} style={{ marginBottom: 'var(--space-3)' }}>
+                  <div
                       onClick={() => setExpandedFolders(prev => ({...prev, [subject]: !prev[subject]}))}
-                      style={{ 
-                          backgroundColor: 'var(--border-color)', 
-                          padding: '12px', 
-                          borderRadius: '4px', 
-                          cursor: 'pointer', 
-                          display: 'flex', 
-                          justifyContent: 'space-between', 
-                          alignItems: 'center', 
-                          fontWeight: 'bold' 
+                      style={{
+                          backgroundColor: 'var(--color-surface-hover)',
+                          padding: 'var(--space-3)',
+                          borderRadius: 'var(--radius-md)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          fontWeight: 600
                       }}
                   >
-                      <div style={{ display: 'flex', alignItems: 'center' }}>
-                          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#007bff', marginRight: '8px', flexShrink: 0 }}>
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                          </svg>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                          {isExpanded
+                            ? <FolderOpen size={18} color="var(--color-primary-500)" />
+                            : <Folder size={18} color="var(--color-primary-500)" />}
                           <span>{subject === 'root' ? 'General' : subject}</span>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                          {subject !== 'Root' && (
-                              <button 
-                                onClick={(e) => { 
-                                    e.stopPropagation(); 
-                                    initiateDelete(null, subject); 
-                                }} 
-                                style={{ padding: '4px 12px', fontSize: '0.8em', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+                          {subject !== 'root' && (
+                              <Button
+                                variant="danger-secondary"
+                                size="sm"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    initiateDelete(null, subject);
+                                }}
                               >
                                 Delete Subject
-                              </button>
+                              </Button>
                           )}
-                          <span>{files.length} file{files.length !== 1 && 's'} {expandedFolders[subject] ? '▼' : '▶'}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', color: 'var(--color-text-secondary)', fontWeight: 500, fontSize: 'var(--font-size-body-sm)' }}>
+                            {files.length} file{files.length !== 1 && 's'}
+                            {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                          </span>
                       </div>
                   </div>
 
-                  {expandedFolders[subject] && (
-                    <ul style={{ listStyleType: 'none', padding: '10px', margin: 0, border: '1px solid var(--border-color)', borderTop: 'none', borderRadius: '0 0 4px 4px' }}>
+                  {isExpanded && (
+                    <ul style={{ listStyleType: 'none', padding: 'var(--space-2) var(--space-3)', margin: 0, border: '1px solid var(--color-border)', borderTop: 'none', borderRadius: '0 0 var(--radius-md) var(--radius-md)' }}>
                       {files.length === 0 ? (
-                          <li style={{ padding: '8px 0', color: '#888', fontStyle: 'italic' }}>No files in this folder.</li>
+                          <li style={{ padding: 'var(--space-2) 0', color: 'var(--color-text-tertiary)', fontStyle: 'italic' }}>No files in this folder.</li>
                       ) : (
                           files.map((file, index) => (
-                            <li key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: index < files.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
-                              
-                              {/* --- UPDATED: Clickable File Name with Document Icon --- */}
-                              <div 
+                            <li key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'var(--space-2) 0', borderBottom: index < files.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
+
+                              <div
                                 onClick={() => openPreview(file.filename, file.subject)}
-                                style={{ display: 'flex', alignItems: 'center', overflow: 'hidden', marginRight: '15px', cursor: 'pointer', flex: 1 }}
+                                style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', overflow: 'hidden', marginRight: 'var(--space-4)', cursor: 'pointer', flex: 1 }}
                                 title="Click to view file"
                               >
-                                {/* New File SVG Icon */}
-                                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#007bff', marginRight: '8px', flexShrink: 0 }}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-color)' }}>
+                                <FileText size={16} color="var(--color-primary-500)" style={{ flexShrink: 0 }} />
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--color-text-primary)' }}>
                                   {file.filename}
                                 </span>
                               </div>
 
-                              <div style={{display:'flex',gap:'8px'}}>
-                                  <button onClick={() => handleDownload(file.filename, file.subject)} style={{ padding: '4px 12px', fontSize: '0.8em', width: 'auto', flex: 'none', whiteSpace: 'nowrap', cursor: 'pointer', color: 'black' }}>
+                              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                                  <Button variant="secondary" size="sm" onClick={() => handleDownload(file.filename, file.subject)}>
                                       Download
-                                  </button>
-                                  <button onClick={() => initiateDelete(file.filename, file.subject)} style={{ padding: '4px 12px', fontSize: '0.8em', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', width:'auto',flex:'none',whiteSpace: 'nowrap',cursor: 'pointer'  }} >
+                                  </Button>
+                                  <Button variant="danger-secondary" size="sm" onClick={() => initiateDelete(file.filename, file.subject)}>
                                       Delete
-                                  </button>
+                                  </Button>
                               </div>
                             </li>
                           ))
@@ -247,91 +288,42 @@ export default function FileManagerTab({
             })}
           </div>
         )}
-      </div>
+      </Card>
 
       {/* --- PREVIEW MODAL --- */}
       {isLoadingPreview && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-          <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', color: 'black' }}>Loading preview...</div>
-        </div>
+        <Modal isOpen maxWidth={280} onClose={() => {}}>
+          <p style={{ margin: 0, textAlign: 'center', color: 'var(--color-text-secondary)' }}>Loading preview...</p>
+        </Modal>
       )}
 
-      {previewUrl && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ backgroundColor: 'var(--container-bg)', width: '100%', maxWidth: '1000px', height: '90vh', borderRadius: '8px', display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
-            
-            {/* Modal Header - Fixed Alignment */}
-            
-            <div style={{ 
-                padding: '15px 20px', 
-                borderBottom: '1px solid var(--border-color)', 
-                display: 'grid', 
-                gridTemplateColumns: '1fr auto', /* Col 1 takes all leftover space, Col 2 fits the button */
-                alignItems: 'center',            /* Vertically centers both */
-                gap: '20px',                     /* Guarantees a 20px gap between text and button */
-                backgroundColor: 'var(--bg-color)',
-                width: '100%',
-                boxSizing: 'border-box'
+      <Modal isOpen={!!previewUrl} onClose={closePreview} maxWidth={1000} maxHeight="90vh" padding={0}>
+        {previewUrl && (
+          <>
+            <div style={{
+                padding: 'var(--space-4) var(--space-5)',
+                borderBottom: '1px solid var(--color-border)',
+                display: 'grid',
+                gridTemplateColumns: '1fr auto',
+                alignItems: 'center',
+                gap: 'var(--space-5)',
+                background: 'var(--color-surface-hover)',
+                flexShrink: 0,
             }}>
-            
-            <h3 style={{ 
-                margin: 0, 
-                fontSize: '18px',
-                whiteSpace: 'nowrap', 
-                overflow: 'hidden', 
-                textOverflow: 'ellipsis',
-                lineHeight: '1'                /* Prevents invisible vertical padding */
-            }}>
-                {previewName}
-            </h3>
-            
-            <button 
-                onClick={closePreview} 
-                aria-label="Close Preview"
-                style={{ 
-                    background: 'none', 
-                    border: 'none', 
-                    cursor: 'pointer', 
-                    padding: '8px', 
-                    margin: 0, 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    color: '#000000'
-                }}
-            >
-                <svg 
-                    width="24" 
-                    height="24" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="2.5" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round"
-                    style={{ display: 'block' }}
-                >
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-            </button>
-            
+              <h3 style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{previewName}</h3>
+              <IconButton icon={<X size={20} />} onClick={closePreview} aria-label="Close Preview" />
             </div>
-              
-              
-            
-            {/* Modal Body / Iframe */}
-            <div style={{ flex: 1, overflow: 'hidden', backgroundColor: '#e9ecef', position: 'relative' }}>
-               <iframe 
-                 src={previewUrl} 
+
+            <div style={{ flex: 1, overflow: 'hidden', backgroundColor: 'var(--color-bg)', position: 'relative' }}>
+               <iframe
+                 src={previewUrl}
                  title="File Preview"
-                 style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} 
+                 style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
                />
             </div>
-          </div>
-        </div>
-      )}
-
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import FileManagerTab from '../components/FileManagerTab';
@@ -18,13 +19,31 @@ import { useSettings } from '../hooks/useSettings';
 import { useAuth } from '../context/AuthContext';
 import * as api from '../services/api';
 
-export default function Dashboard({ showPopup }) {
+const TAB_TITLES = {
+  quizzes: 'My Quizzes',
+  chat: 'AI Tutor',
+  files: 'My Files',
+  settings: 'Settings',
+};
+
+export default function Dashboard() {
   const { userId } = useAuth();
+  const location = useLocation();
 
   // ── Layout / navigation state ──────────────────────────────────────────
   const [activeTab, setActiveTab] = useState('files');
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  // Briefly shows the "Login Successful" overlay when arriving here right
+  // after login (see Login.jsx's navigate(..., { state: { showPopup: true } })).
+  const [showPopup, setShowPopup] = useState(!!location.state?.showPopup);
+  useEffect(() => {
+    if (!showPopup) return;
+    const timer = setTimeout(() => setShowPopup(false), 2000);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Chat / quiz session state ──────────────────────────────────────────
   const [activeSessionId, setActiveSessionId] = useState(null);
@@ -40,7 +59,10 @@ export default function Dashboard({ showPopup }) {
 
     const loadConfig = async () => {
       try {
-        const configData = await api.getUserConfig();
+        // getUserConfig() resolves the full {status, message, data} envelope —
+        // the actual config fields live under .data, not on the response itself.
+        const res = await api.getUserConfig();
+        const configData = res.data || {};
         if (configData.theme) {
           settings.setTheme(configData.theme);
           settings.applyTheme(configData.theme);
@@ -94,6 +116,7 @@ export default function Dashboard({ showPopup }) {
 
       <div className="main-content">
         <Topbar
+          title={TAB_TITLES[activeTab]}
           showProfileMenu={showProfileMenu}
           setShowProfileMenu={setShowProfileMenu}
         />
@@ -124,9 +147,12 @@ export default function Dashboard({ showPopup }) {
               newSubject={fileManager.newSubject}
               setNewSubject={fileManager.setNewSubject}
               setSelectedFiles={fileManager.setSelectedFiles}
-              setUploadStatus={fileManager.setUploadStatus}
+              resetUploadState={fileManager.resetUploadState}
               handleFileUpload={fileManager.handleFileUpload}
-              uploadStatus={fileManager.uploadStatus}
+              uploadState={fileManager.uploadState}
+              uploadProgress={fileManager.uploadProgress}
+              uploadError={fileManager.uploadError}
+              uploadedFolder={fileManager.uploadedFolder}
               // File listing
               searchQuery={fileManager.searchQuery}
               setSearchQuery={fileManager.setSearchQuery}

@@ -1,51 +1,114 @@
 /**
  * @file SettingsTab.jsx
- * @description Allows the user to view their profile and update UI preferences 
+ * @description Allows the user to view their profile and update UI preferences
  * like Theme (Light/Dark) and Language.
  */
-import React from 'react';
-import { useAuth } from '../context/AuthContext'; // 1. Import the hook
+import React, { useState } from 'react';
+import { Sun, Moon, Check, LogOut } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import Card from './ui/Card';
+import Button from './ui/Button';
+import OptionCard from './ui/OptionCard';
 
-export default function SettingsTab({ 
-  theme, setTheme, language, setLanguage, handleSavePreferences 
+const THEME_OPTIONS = [
+  { value: 'light', label: 'Light Mode', icon: <Sun size={18} /> },
+  { value: 'dark', label: 'Dark Mode', icon: <Moon size={18} /> },
+];
+
+const LANGUAGE_OPTIONS = [
+  { value: 'english', label: 'English' },
+  { value: 'sinhala', label: 'Sinhala' },
+  { value: 'tamil', label: 'Tamil' },
+];
+
+export default function SettingsTab({
+  theme, setTheme, language, setLanguage, handleSavePreferences
 }) {
-  // 2. Grab the user data directly from the global context
-  const { userName, userId, logout } = useAuth(); 
+  const { userName, userId, logout } = useAuth();
+  const [justSaved, setJustSaved] = useState(false);
+
+  const handleSave = async () => {
+    const success = await handleSavePreferences(false);
+    if (success) {
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 2500);
+    }
+  };
 
   return (
-    <div style={{ maxWidth: '600px' }}>
-      <h2>Account Settings</h2>
-      <p style={{ color: '#666' }}>Update your workspace preferences.</p>
-      
-      <div style={{ backgroundColor: 'var(--container-bg)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-        <p><b>Name:</b> {userName}</p>
-        <p><b>User ID:</b> <span style={{ fontSize: '0.9em', color: '#666' }}>{userId}</span></p>
-        <hr style={{ borderColor: 'var(--border-color)', margin: '20px 0' }}/>
-        
-        <label style={{ fontWeight: 'bold' }}>Theme:</label>
-        <select value={theme} onChange={(e) => setTheme(e.target.value)} style={{ marginBottom: '15px' }}>
-          <option value="light">Light Mode</option>
-          <option value="dark">Dark Mode</option>
-        </select>
-
-        <label style={{ fontWeight: 'bold', display: 'block' }}>Language:</label>
-        <select value={language} onChange={(e) => setLanguage(e.target.value)}>
-          <option value="english">English</option>
-          <option value="spanish">Sinhala</option>
-          <option value="french">Tamil</option>
-        </select>
-        
-        <button onClick={() => { handleSavePreferences(false); alert("Settings updated successfully!"); }} style={{ backgroundColor: 'var(--primary)', marginTop: '20px' }}>
-          Save Changes
-        </button>
-
-        <hr style={{ borderColor: 'var(--border-color)', margin: '30px 0 20px 0' }}/>
-        
-        {/* 3. Use the logout function from context */}
-        <button onClick={logout} style={{ backgroundColor: '#dc3545', width: 'auto', padding: '10px 30px' }}>
-          Sign Out
-        </button>
+    <div style={{ maxWidth: '640px', display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+      <div>
+        <h2>Account Settings</h2>
+        <p style={{ color: 'var(--color-text-secondary)', marginTop: 'var(--space-1)' }}>
+          Update your workspace preferences.
+        </p>
       </div>
+
+      <Card>
+        <h3>Profile</h3>
+        <div style={{ marginTop: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-body)' }}>
+            <span style={{ color: 'var(--color-text-secondary)' }}>Name</span>
+            <span style={{ fontWeight: 600 }}>{userName}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-body)' }}>
+            <span style={{ color: 'var(--color-text-secondary)' }}>User ID</span>
+            <span style={{ fontSize: 'var(--font-size-body-sm)', color: 'var(--color-text-tertiary)' }}>{userId}</span>
+          </div>
+        </div>
+      </Card>
+
+      <Card>
+        <h3>Preferences</h3>
+
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <label style={{ fontWeight: 600, fontSize: 'var(--font-size-body-sm)', color: 'var(--color-text-secondary)' }}>
+            Theme
+          </label>
+          <div style={{ marginTop: 'var(--space-2)' }}>
+            <OptionCard.Group value={theme} onChange={setTheme} options={THEME_OPTIONS} columns={2} />
+          </div>
+        </div>
+
+        <div style={{ marginTop: 'var(--space-5)' }}>
+          <label style={{ fontWeight: 600, fontSize: 'var(--font-size-body-sm)', color: 'var(--color-text-secondary)' }}>
+            Language
+          </label>
+          <div style={{ marginTop: 'var(--space-2)' }}>
+            <OptionCard.Group value={language} onChange={setLanguage} options={LANGUAGE_OPTIONS} columns={3} />
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginTop: 'var(--space-5)' }}>
+          <Button onClick={handleSave}>Save Changes</Button>
+          {justSaved && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 'var(--space-1)',
+                color: 'var(--color-success)',
+                fontSize: 'var(--font-size-body-sm)',
+                fontWeight: 600,
+              }}
+            >
+              <Check size={16} /> Saved
+            </span>
+          )}
+        </div>
+      </Card>
+
+      <Card>
+        <h3>Account</h3>
+        <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-body-sm)', marginTop: 'var(--space-1)' }}>
+          Sign out of Study Companion on this device.
+        </p>
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <Button variant="danger-secondary" iconLeft={<LogOut size={16} />} onClick={logout}>
+            Sign Out
+          </Button>
+        </div>
+      </Card>
     </div>
   );
 }
