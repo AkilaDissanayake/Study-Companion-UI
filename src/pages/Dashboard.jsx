@@ -14,12 +14,14 @@ import SettingsTab from '../components/SettingsTab';
 import ConfirmDialog from '../components/ConfirmDialog';
 import ChatTab from '../components/ChatTab';
 import QuizzesTab from '../components/QuizzesTab';
+import OverviewTab from '../components/OverviewTab';
 import { useFileManager } from '../hooks/useFileManager';
 import { useSettings } from '../hooks/useSettings';
 import { useAuth } from '../context/AuthContext';
 import * as api from '../services/api';
 
 const TAB_TITLES = {
+  overview: 'Overview',
   quizzes: 'My Quizzes',
   chat: 'AI Tutor',
   files: 'My Files',
@@ -31,8 +33,9 @@ export default function Dashboard() {
   const location = useLocation();
 
   // ── Layout / navigation state ──────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState('files');
+  const [activeTab, setActiveTab] = useState('overview');
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   // Briefly shows the "Login Successful" overlay when arriving here right
@@ -112,6 +115,8 @@ export default function Dashboard() {
         activeSessionId={activeSessionId}
         setActiveSessionId={setActiveSessionId}
         setActiveQuizId={setActiveQuizId}
+        isMobileOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
       <div className="main-content">
@@ -119,9 +124,19 @@ export default function Dashboard() {
           title={TAB_TITLES[activeTab]}
           showProfileMenu={showProfileMenu}
           setShowProfileMenu={setShowProfileMenu}
+          onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
         />
 
         <div className={`content-area ${activeTab === 'chat' ? 'chat-active' : ''}`}>
+
+          {activeTab === 'overview' && (
+            <OverviewTab
+              onResumeChat={(sessionId) => {
+                setActiveSessionId(sessionId);
+                setActiveTab('chat');
+              }}
+            />
+          )}
 
           {activeTab === 'quizzes' && (
             <QuizzesTab
@@ -146,6 +161,7 @@ export default function Dashboard() {
               subjects={fileManager.subjects}
               newSubject={fileManager.newSubject}
               setNewSubject={fileManager.setNewSubject}
+              selectedFiles={fileManager.selectedFiles}
               setSelectedFiles={fileManager.setSelectedFiles}
               resetUploadState={fileManager.resetUploadState}
               handleFileUpload={fileManager.handleFileUpload}

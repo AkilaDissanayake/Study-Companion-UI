@@ -1,7 +1,7 @@
 // components/QuizzesTab.jsx
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Check, X, ClipboardList, Trash2 } from 'lucide-react';
-import { getMyQuizzes, getQuizById, submitQuizAnswers, deleteQuiz } from '../services/api';
+import { getMyQuizzes, getQuizById, submitQuizAnswers, deleteQuiz, getStatsSummary, ackMilestone } from '../services/api';
 import { useNotify } from '../context/NotificationContext';
 import Card from './ui/Card';
 import Button from './ui/Button';
@@ -9,6 +9,45 @@ import Badge from './ui/Badge';
 import EmptyState from './ui/EmptyState';
 import IconButton from './ui/IconButton';
 import ConfirmDialog from './ConfirmDialog';
+import CelebrationModal from './CelebrationModal';
+import useInView from '../hooks/useInView';
+
+// A score at or above this fraction reads as "passing" — colored with
+// --color-success (growth/mastery) rather than --color-warning, so the
+// score badge and the in-progress-quiz badge share the same success
+// threshold instead of only ever turning green on a perfect score.
+const PASSING_SCORE_RATIO = 0.6;
+
+function QuizListItem({ quiz, index, onSelect, onDelete }) {
+  const { ref, isInView } = useInView();
+  return (
+    <Card
+      ref={ref}
+      className={`reveal${isInView ? ' is-visible' : ''}`}
+      hoverable
+      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', '--reveal-delay': `${index * 50}ms` }}
+    >
+      {/* A real <button>, sibling to the delete IconButton (not nested inside it) */}
+      <button
+        type="button"
+        onClick={onSelect}
+        style={{ all: 'unset', boxSizing: 'border-box', cursor: 'pointer', flex: 1, minWidth: 0, textAlign: 'left' }}
+      >
+        <h3 style={{ color: 'var(--color-primary-500)' }}>{quiz.title}</h3>
+        <small style={{ color: 'var(--color-text-tertiary)' }}>
+          Created: {new Date(quiz.created_at).toLocaleDateString()}
+        </small>
+      </button>
+      <IconButton
+        variant="ghost"
+        aria-label="Delete quiz"
+        title="Delete quiz"
+        icon={<Trash2 size={16} color="var(--color-danger)" />}
+        onClick={onDelete}
+      />
+    </Card>
+  );
+}
 
 export default function QuizzesTab({ activeQuizId, setActiveQuizId }) {
   const notify = useNotify();
@@ -24,6 +63,11 @@ export default function QuizzesTab({ activeQuizId, setActiveQuizId }) {
   // Delete confirmation
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [quizToDelete, setQuizToDelete] = useState(null);
+
+  // Newly-unlocked streak/badge milestones, shown one at a time after a
+  // successful submission (see handleSubmit).
+  const [celebrationQueue, setCelebrationQueue] = useState([]);
+  const activeCelebration = celebrationQueue[0] || null;
 
   useEffect(() => {
     fetchQuizList();
@@ -93,11 +137,50 @@ export default function QuizzesTab({ activeQuizId, setActiveQuizId }) {
         setGradingResults(response.data);
         setCurrentQuestionIndex(0);
       }
+
+      // Check for newly-unlocked streak/badge milestones to celebrate.
+      // Non-critical: a stats hiccup should never block the quiz results.
+      try {
+        const stats = await getStatsSummary();
+        const queue = [];
+        for (const days of stats.newly_unlocked?.streaks || []) {
+          queue.push({
+            type: 'streak',
+            id: days,
+            title: `${days}-Day Streak!`,
+            description: `You've studied ${days} day${days === 1 ? '' : 's'} in a row. Keep it going!`,
+          });
+        }
+        for (const badgeId of stats.newly_unlocked?.badges || []) {
+          const badge = (stats.badges || []).find((b) => b.id === badgeId);
+          queue.push({
+            type: 'badge',
+            id: badgeId,
+            title: badge?.label || 'New Badge!',
+            description: badge?.description,
+          });
+        }
+        if (queue.length > 0) setCelebrationQueue(queue);
+      } catch {
+        // silent — see comment above
+      }
     } catch (error) {
       notify.error(error.message || 'Failed to grade quiz. Please try again.', { retry: handleSubmit });
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleCloseCelebration = async () => {
+    const current = celebrationQueue[0];
+    if (current) {
+      try {
+        await ackMilestone(current.type, current.id);
+      } catch {
+        // If the ack fails it may re-celebrate next time — harmless, non-critical.
+      }
+    }
+    setCelebrationQueue((prev) => prev.slice(1));
   };
 
   const handleDeleteClick = (e, quiz) => {
@@ -156,27 +239,14 @@ export default function QuizzesTab({ activeQuizId, setActiveQuizId }) {
           />
         ) : (
           <div style={{ display: 'grid', gap: 'var(--space-3)', marginTop: 'var(--space-5)' }}>
-            {quizList.map(quiz => (
-              <Card
+            {quizList.map((quiz, index) => (
+              <QuizListItem
                 key={quiz.id}
-                hoverable
-                onClick={() => loadQuiz(quiz.id)}
-                style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-              >
-                <div>
-                  <h3 style={{ color: 'var(--color-primary-500)' }}>{quiz.title}</h3>
-                  <small style={{ color: 'var(--color-text-tertiary)' }}>
-                    Created: {new Date(quiz.created_at).toLocaleDateString()}
-                  </small>
-                </div>
-                <IconButton
-                  variant="ghost"
-                  aria-label="Delete quiz"
-                  title="Delete quiz"
-                  icon={<Trash2 size={16} color="var(--color-danger)" />}
-                  onClick={(e) => handleDeleteClick(e, quiz)}
-                />
-              </Card>
+                quiz={quiz}
+                index={index}
+                onSelect={() => loadQuiz(quiz.id)}
+                onDelete={(e) => handleDeleteClick(e, quiz)}
+              />
             ))}
           </div>
         )}
@@ -196,13 +266,20 @@ export default function QuizzesTab({ activeQuizId, setActiveQuizId }) {
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
 
+      <CelebrationModal
+        isOpen={!!activeCelebration}
+        onClose={handleCloseCelebration}
+        title={activeCelebration?.title}
+        description={activeCelebration?.description}
+      />
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)' }}>
         <Button variant="ghost" iconLeft={<ArrowLeft size={16} />} onClick={() => setActiveQuizId(null)}>
           Back to Quizzes
         </Button>
 
         {gradingResults && (
-          <Badge tone={gradingResults.score === gradingResults.total ? 'success' : 'warning'}>
+          <Badge tone={gradingResults.score / gradingResults.total >= PASSING_SCORE_RATIO ? 'success' : 'warning'}>
             Score: {gradingResults.score} / {gradingResults.total}
           </Badge>
         )}
@@ -329,7 +406,7 @@ export default function QuizzesTab({ activeQuizId, setActiveQuizId }) {
           )}
         </div>
 
-        <div style={{ marginTop: 'var(--space-8)', display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-6)' }}>
+        <div className="quiz-footer-actions" style={{ marginTop: 'var(--space-8)', display: 'flex', justifyContent: 'space-between', gap: 'var(--space-3)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-6)' }}>
           <Button
             variant="secondary"
             onClick={() => setCurrentQuestionIndex(prev => prev - 1)}

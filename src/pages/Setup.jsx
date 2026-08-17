@@ -56,7 +56,7 @@ export default function Setup() {
         <div className="auth-branding-glow" />
         <img src={heroImage} alt="" className="auth-branding-hero" />
         <div className="auth-branding-copy">
-          <h1 style={{ color: '#ffffff', fontSize: 'var(--font-size-h1)' }}>Let's set things up</h1>
+          <h1 style={{ color: 'var(--color-on-primary)', fontSize: 'var(--font-size-h1)' }}>Let's set things up</h1>
           <p style={{ color: 'rgba(255,255,255,0.8)', maxWidth: '320px', margin: 'var(--space-2) auto 0' }}>
             A couple of quick preferences to make Study Companion feel like yours.
           </p>

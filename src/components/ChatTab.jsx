@@ -93,7 +93,11 @@ export default function ChatTab({ activeSessionId, setActiveSessionId, setRefres
     if (!input.trim()) return;
 
     const msgId = `msg-${Date.now()}`;
-    const userMsg = { id: msgId, role: "user", text: input };
+    // `fresh` distinguishes a just-sent/just-received message (gets the
+    // .message-enter reveal) from history loaded on chat open (renders
+    // instantly — see the render below) — never re-plays the whole
+    // conversation's entrance every time an old chat is reopened.
+    const userMsg = { id: msgId, role: "user", text: input, fresh: true };
 
     setMessages(prev => [...prev, userMsg]);
     setInput("");
@@ -111,7 +115,7 @@ export default function ChatTab({ activeSessionId, setActiveSessionId, setRefres
       const response = await sendChatMessage(userMsg.text, sessionId);
 
       if (response.status === "success") {
-        setMessages(prev => [...prev, { id: `bot-${Date.now()}`, role: "bot", text: response.data.response }]);
+        setMessages(prev => [...prev, { id: `bot-${Date.now()}`, role: "bot", text: response.data.response, fresh: true }]);
 
         if (!sessionId && response.data.session_id) {
           setSessionId(response.data.session_id);
@@ -130,7 +134,8 @@ export default function ChatTab({ activeSessionId, setActiveSessionId, setRefres
           id: `error-${Date.now()}`,
           role: "bot",
           text: `⚠️ **System Error:** Connection failed.\n\n*Details: ${error.message}*`,
-          isError: true
+          isError: true,
+          fresh: true
         }
       ]);
     } finally {
@@ -228,7 +233,7 @@ export default function ChatTab({ activeSessionId, setActiveSessionId, setRefres
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = 'var(--color-primary-500)';
-                e.currentTarget.style.color = '#fff';
+                e.currentTarget.style.color = 'var(--color-on-primary)';
                 e.currentTarget.style.borderColor = 'var(--color-primary-500)';
               }}
               onMouseLeave={(e) => {
@@ -276,15 +281,33 @@ export default function ChatTab({ activeSessionId, setActiveSessionId, setRefres
             </div>
           ) : (
             messages.map((msg) => (
-              <div key={msg.id} id={msg.id} style={{ width: '100%' }}>
+              <div key={msg.id} id={msg.id} className={msg.fresh ? 'message-enter' : ''} style={{ width: '100%' }}>
                 <ChatMessage role={msg.role} text={msg.text} isError={msg.isError} />
               </div>
             ))
           )}
 
           {isLoading && (
-            <div style={{ padding: 'var(--space-4)', color: 'var(--color-text-tertiary)', fontStyle: 'italic' }}>
-              Thinking...
+            <div style={{ display: 'flex', width: '100%', marginBottom: 'var(--space-4)' }}>
+              <div
+                role="status"
+                aria-label="AI Tutor is thinking"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '16px 20px',
+                  borderRadius: 'var(--radius-lg)',
+                  borderBottomLeftRadius: 0,
+                  backgroundColor: 'var(--color-surface)',
+                  border: '1px solid var(--color-border)',
+                  boxShadow: 'var(--shadow-xs)',
+                }}
+              >
+                <span className="skeleton-pulse" style={{ width: 7, height: 7, borderRadius: 'var(--radius-full)', animationDelay: '0ms' }} />
+                <span className="skeleton-pulse" style={{ width: 7, height: 7, borderRadius: 'var(--radius-full)', animationDelay: '150ms' }} />
+                <span className="skeleton-pulse" style={{ width: 7, height: 7, borderRadius: 'var(--radius-full)', animationDelay: '300ms' }} />
+              </div>
             </div>
           )}
 
@@ -306,11 +329,15 @@ export default function ChatTab({ activeSessionId, setActiveSessionId, setRefres
             {userQuestions.map((msg, idx) => {
               const isLast = idx === userQuestions.length - 1;
               return (
-                <div
+                <button
                   key={msg.id}
+                  type="button"
                   onClick={() => scrollToMessage(msg.id)}
                   title={msg.text}
+                  aria-label={`Jump to question: ${msg.text}`}
                   style={{
+                    all: 'unset',
+                    boxSizing: 'border-box',
                     width: '16px',
                     height: '3px',
                     borderRadius: 'var(--radius-full)',
@@ -346,6 +373,7 @@ export default function ChatTab({ activeSessionId, setActiveSessionId, setRefres
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               placeholder="Ask anything you need..."
+              aria-label="Chat message"
               rows={1}
               style={{
                 width: '100%',
@@ -360,7 +388,6 @@ export default function ChatTab({ activeSessionId, setActiveSessionId, setRefres
                 fontSize: '16px',
                 fontFamily: 'var(--font-body)',
                 lineHeight: '1.4',
-                outline: 'none',
                 boxSizing: 'border-box',
                 boxShadow: 'var(--shadow-xs)',
                 resize: 'none',
@@ -371,6 +398,7 @@ export default function ChatTab({ activeSessionId, setActiveSessionId, setRefres
             <button
               onClick={handleSend}
               disabled={isLoading || !input.trim()}
+              aria-label="Send message"
               style={{
                 position: 'absolute',
                 right: '8px',
@@ -381,7 +409,7 @@ export default function ChatTab({ activeSessionId, setActiveSessionId, setRefres
                 padding: 0,
                 borderRadius: 'var(--radius-full)',
                 backgroundColor: (isLoading || !input.trim()) ? 'transparent' : 'var(--color-primary-500)',
-                color: (isLoading || !input.trim()) ? 'var(--color-text-tertiary)' : 'white',
+                color: (isLoading || !input.trim()) ? 'var(--color-text-tertiary)' : 'var(--color-on-primary)',
                 border: 'none',
                 cursor: (isLoading || !input.trim()) ? 'not-allowed' : 'pointer',
                 display: 'flex',

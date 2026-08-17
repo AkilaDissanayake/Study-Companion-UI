@@ -68,7 +68,14 @@ export default function PricingSection() {
           <h3>{tier.name}</h3>
 
           <div style={{ marginTop: 'var(--space-3)', display: 'flex', alignItems: 'baseline', gap: 'var(--space-1)' }}>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-display)', fontWeight: 650 }}>
+            <span
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 'var(--font-size-stat)',
+                fontWeight: 700,
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
               {formatPrice(tier)}
             </span>
             {!!tier.price && (

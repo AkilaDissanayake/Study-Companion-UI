@@ -37,7 +37,7 @@ export default function ForgotPassword() {
         <div className="auth-branding-glow" />
         <img src={heroImage} alt="" className="auth-branding-hero" />
         <div className="auth-branding-copy">
-          <h1 style={{ color: '#ffffff', fontSize: 'var(--font-size-h1)' }}>Study Companion</h1>
+          <h1 style={{ color: 'var(--color-on-primary)', fontSize: 'var(--font-size-h1)' }}>Study Companion</h1>
         </div>
       </div>
 

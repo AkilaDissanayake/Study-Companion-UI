@@ -54,19 +54,23 @@ function Option({ label, description, icon, selected, onSelect }) {
           flexShrink: 0,
         }}
       >
-        {selected && <Check size={13} color="#ffffff" strokeWidth={3} />}
+        {selected && <Check size={13} color="var(--color-on-primary)" strokeWidth={3} />}
       </span>
     </div>
   );
 }
 
-/** Lays out a set of Options in a responsive grid. Pass `value`/`onChange` plus `options`. */
+/** Lays out a set of Options in a responsive grid. Pass `value`/`onChange` plus `options`.
+ * `columns` is a soft hint (the minimum card width shrinks as it grows), not
+ * a hard column count — the grid self-reflows via auto-fit so it never
+ * overflows on narrow/mobile widths. */
 function Group({ value, onChange, options, columns = 2 }) {
+  const minCardWidth = columns >= 3 ? 130 : 160;
   return (
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: `repeat(${columns}, 1fr)`,
+        gridTemplateColumns: `repeat(auto-fit, minmax(${minCardWidth}px, 1fr))`,
         gap: 'var(--space-3)',
       }}
       role="radiogroup"

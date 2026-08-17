@@ -2,12 +2,14 @@
  * @file Sidebar.jsx
  * @description The main left-hand navigation menu for the dashboard.
  * Controls which tab is currently active and manages chat history deletion/actions.
+ * Below 768px it becomes an off-canvas drawer (see `isMobileOpen`/`onCloseMobile`).
  */
 
 import React, { useState, useEffect } from 'react';
 import {
   PanelLeftClose,
   PanelLeftOpen,
+  LayoutDashboard,
   ClipboardList,
   MessageSquare,
   FolderOpen,
@@ -25,11 +27,18 @@ import IconButton from './ui/IconButton';
 import { Input } from './ui/Input';
 
 const NAV_ITEMS = [
+  { tab: 'overview', label: 'Overview', icon: LayoutDashboard },
   { tab: 'quizzes', label: 'My Quizzes', icon: ClipboardList },
   { tab: 'chat', label: 'AI Tutor', icon: MessageSquare },
   { tab: 'files', label: 'My Files', icon: FolderOpen },
   { tab: 'settings', label: 'Settings', icon: SettingsIcon },
 ];
+
+// Resets a native <button> to look unstyled, so it can carry arbitrary
+// visual styles (nav rows, chat-row titles) without browser button chrome.
+// `all: 'unset'` must stay the first key — later keys in the same object
+// still override it, same as CSS cascade within one declaration block.
+const buttonReset = { all: 'unset', cursor: 'pointer', boxSizing: 'border-box' };
 
 export default function Sidebar({
   activeTab,
@@ -40,6 +49,8 @@ export default function Sidebar({
   setActiveSessionId,
   setActiveQuizId,
   refreshTrigger,
+  isMobileOpen,
+  onCloseMobile,
 }) {
   const notify = useNotify();
   const [chatHistory, setChatHistory] = useState([]);
@@ -52,11 +63,18 @@ export default function Sidebar({
   // Dropdown menu
   const [openMenuId, setOpenMenuId] = useState(null);
 
-  // Close dropdown when user clicks elsewhere
+  // Close dropdown when user clicks elsewhere, or presses Escape
   useEffect(() => {
     const handleClickOutside = () => setOpenMenuId(null);
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') setOpenMenuId(null);
+    };
     document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, []);
 
   // Fetch chat list whenever the chat tab is active or sessions change
@@ -128,20 +146,40 @@ export default function Sidebar({
     return title.toLowerCase().includes(chatSearchQuery.trim().toLowerCase());
   });
 
-  // ── Shared nav item style helper ────────────────────────────────────
+  const handleNavSelect = (tab) => {
+    setActiveTab(tab);
+    if (tab === 'quizzes' && setActiveQuizId) setActiveQuizId(null);
+    // Auto-close the off-canvas drawer on mobile so picking a destination
+    // doesn't leave the drawer covering the content it just navigated to.
+    if (onCloseMobile) onCloseMobile();
+  };
 
-  const navItemStyle = (tab) => ({
-    padding: isCollapsed ? '12px 0' : '10px 16px',
+  // ── Shared nav row style helper (now applied to the wrapping div, since
+  // the clickable label itself is a real <button> — see buttonReset above) ──
+
+  const navRowStyle = (tab) => ({
     margin: '2px 8px',
-    cursor: 'pointer',
     borderRadius: 'var(--radius-md)',
-    transition: `background-color var(--duration-base) var(--ease-standard)`,
-    whiteSpace: 'nowrap',
     display: 'flex',
-    justifyContent: isCollapsed ? 'center' : 'space-between',
     alignItems: 'center',
-    gap: 'var(--space-3)',
+    justifyContent: isCollapsed ? 'center' : 'space-between',
+    transition: `background-color var(--duration-base) var(--ease-standard)`,
     backgroundColor: activeTab === tab ? 'var(--color-sidebar-surface-hover)' : 'transparent',
+  });
+
+  const navButtonStyle = (tab) => ({
+    ...buttonReset,
+    flex: 1,
+    minWidth: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: isCollapsed ? 'center' : 'flex-start',
+    gap: 'var(--space-3)',
+    padding: isCollapsed ? '12px 0' : '10px 16px',
+    fontSize: 'var(--font-size-body-sm)',
+    fontFamily: 'var(--font-body)',
+    fontWeight: 500,
+    whiteSpace: 'nowrap',
     color: activeTab === tab ? 'var(--color-sidebar-text)' : 'var(--color-sidebar-text-muted)',
   });
 
@@ -154,13 +192,17 @@ export default function Sidebar({
         message="Are you sure you want to delete this chat? This action cannot be undone."
       />
 
-      <div className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
+      {/* Mobile-only backdrop — CSS keeps this inert (display:none) above
+          768px regardless of state, so it can never strand an overlay. */}
+      {isMobileOpen && <div className="sidebar-scrim" onClick={onCloseMobile} />}
+
+      <div className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${isMobileOpen ? 'mobile-open' : ''}`}>
         {/* ── Header ── */}
         <div className="sidebar-header">
           {!isCollapsed && <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', color: 'var(--color-sidebar-text)' }}>Study Companion</h2>}
           <IconButton
             variant="sidebar"
-            aria-label="Toggle sidebar"
+            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             onClick={() => setIsCollapsed(!isCollapsed)}
             icon={isCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
           />
@@ -170,29 +212,30 @@ export default function Sidebar({
         <ul style={{ padding: '8px 0' }}>
           {NAV_ITEMS.map(({ tab, label, icon: Icon }) => (
             <React.Fragment key={tab}>
-              <li
-                style={navItemStyle(tab)}
-                title={isCollapsed ? label : undefined}
-                onClick={() => {
-                  setActiveTab(tab);
-                  if (tab === 'quizzes' && setActiveQuizId) setActiveQuizId(null);
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', overflow: 'hidden' }}>
+              <li style={navRowStyle(tab)}>
+                <button
+                  type="button"
+                  style={navButtonStyle(tab)}
+                  title={isCollapsed ? label : undefined}
+                  aria-current={activeTab === tab ? 'page' : undefined}
+                  onClick={() => handleNavSelect(tab)}
+                >
                   <Icon size={18} style={{ flexShrink: 0 }} />
                   {!isCollapsed && <span>{label}</span>}
-                </span>
+                </button>
 
                 {tab === 'chat' && activeTab === 'chat' && !isCollapsed && (
                   <IconButton
                     variant="sidebar"
                     size={28}
                     title="New Chat"
+                    aria-label="Start a new chat"
                     onClick={(e) => {
                       e.stopPropagation();
                       setActiveSessionId(null);
                     }}
                     icon={<SquarePen size={16} />}
+                    style={{ marginRight: 'var(--space-2)' }}
                   />
                 )}
               </li>
@@ -204,6 +247,7 @@ export default function Sidebar({
                     <Input
                       iconLeft={<Search size={14} />}
                       placeholder="Search chats..."
+                      aria-label="Search chats by title"
                       value={chatSearchQuery}
                       onChange={(e) => setChatSearchQuery(e.target.value)}
                       style={{
@@ -228,125 +272,143 @@ export default function Sidebar({
                       No matching chats.
                     </p>
                   ) : (
-                <ul
-                  style={{
-                    padding: '0 0 0 8px',
-                    margin: '8px 0 0',
-                    fontSize: 'var(--font-size-body-sm)',
-                    listStyleType: 'none',
-                    borderLeft: '1px solid var(--color-sidebar-border)',
-                  }}
-                >
-                  {filteredChatHistory.map((chat) => (
-                    <li
-                      key={chat.session_id}
-                      onClick={() => setActiveSessionId(chat.session_id)}
-                      title={chat.title?.trim() ? chat.title : 'New Chat'}
+                    <ul
                       style={{
-                        padding: '8px 8px 8px 12px',
-                        margin: '2px 0',
-                        cursor: 'pointer',
-                        borderRadius: 'var(--radius-sm)',
-                        backgroundColor:
-                          activeSessionId === chat.session_id
-                            ? 'var(--color-sidebar-surface-hover)'
-                            : 'transparent',
-                        color: 'var(--color-sidebar-text)',
-                        display: 'grid',
-                        gridTemplateColumns: '1fr auto',
-                        alignItems: 'center',
-                        gap: 'var(--space-2)',
-                        boxSizing: 'border-box',
-                        textAlign: 'left',
-                        transition: `background-color var(--duration-base) var(--ease-standard)`,
-                      }}
-                      onMouseEnter={(e) => {
-                        if (activeSessionId !== chat.session_id)
-                          e.currentTarget.style.backgroundColor = 'var(--color-sidebar-surface-hover)';
-                      }}
-                      onMouseLeave={(e) => {
-                        if (activeSessionId !== chat.session_id)
-                          e.currentTarget.style.backgroundColor = 'transparent';
+                        padding: '0 0 0 8px',
+                        margin: '8px 0 0',
+                        fontSize: 'var(--font-size-body-sm)',
+                        listStyleType: 'none',
+                        borderLeft: '1px solid var(--color-sidebar-border)',
                       }}
                     >
-                      {/* Title */}
-                      <div
-                        style={{
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          fontWeight: activeSessionId === chat.session_id ? '600' : 'normal',
-                        }}
-                      >
-                        {chat.title?.trim() ? chat.title : 'New Chat'}
-                      </div>
-
-                      {/* Three-dot menu */}
-                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                        <IconButton
-                          variant="sidebar"
-                          size={26}
-                          onClick={(e) => toggleMenu(e, chat.session_id)}
-                          icon={<MoreVertical size={16} />}
-                        />
-
-                        {/* Dropdown */}
-                        {openMenuId === chat.session_id && (
-                          <div
+                      {filteredChatHistory.map((chat) => {
+                        const chatTitle = chat.title?.trim() ? chat.title : 'New Chat';
+                        const isActive = activeSessionId === chat.session_id;
+                        return (
+                          <li
+                            key={chat.session_id}
                             style={{
-                              position: 'absolute',
-                              right: 0,
-                              top: '100%',
-                              marginTop: '4px',
-                              backgroundColor: 'var(--color-surface)',
-                              borderRadius: 'var(--radius-md)',
-                              boxShadow: 'var(--shadow-md)',
-                              minWidth: '170px',
-                              zIndex: 100,
-                              overflow: 'hidden',
-                              border: '1px solid var(--color-border)',
+                              margin: '2px 0',
+                              borderRadius: 'var(--radius-sm)',
+                              backgroundColor: isActive ? 'var(--color-sidebar-surface-hover)' : 'transparent',
+                              display: 'grid',
+                              gridTemplateColumns: '1fr auto',
+                              alignItems: 'center',
+                              transition: `background-color var(--duration-base) var(--ease-standard)`,
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isActive) e.currentTarget.style.backgroundColor = 'var(--color-sidebar-surface-hover)';
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
                             }}
                           >
-                            <div
-                              onClick={(e) => handleGenerateQuiz(e, chat)}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                padding: '10px 12px',
-                                cursor: 'pointer',
-                                color: 'var(--color-text-primary)',
-                                transition: 'background-color var(--duration-base) var(--ease-standard)',
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveSessionId(chat.session_id);
+                                if (onCloseMobile) onCloseMobile();
                               }}
-                              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)')}
-                              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                              title={chatTitle}
+                              aria-current={isActive ? 'true' : undefined}
+                              style={{
+                                ...buttonReset,
+                                padding: '8px 8px 8px 12px',
+                                minWidth: 0,
+                                textAlign: 'left',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                color: 'var(--color-sidebar-text)',
+                                fontFamily: 'var(--font-body)',
+                                fontSize: 'var(--font-size-body-sm)',
+                                fontWeight: isActive ? 600 : 400,
+                              }}
                             >
-                              <Wand2 size={16} style={{ marginRight: '8px' }} />
-                              Generate Quiz
-                            </div>
+                              {chatTitle}
+                            </button>
 
-                            <div
-                              onClick={(e) => handleDeleteClick(e, chat)}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                padding: '10px 12px',
-                                cursor: 'pointer',
-                                color: 'var(--color-danger)',
-                                borderTop: '1px solid var(--color-border)',
-                                transition: 'background-color var(--duration-base) var(--ease-standard)',
-                              }}
-                              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-danger-bg)')}
-                              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                            >
-                              <Trash2 size={16} style={{ marginRight: '8px' }} />
-                              Delete
+                            {/* Three-dot menu — sibling of the select button, never nested inside it */}
+                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                              <IconButton
+                                variant="sidebar"
+                                size={26}
+                                aria-label={`More options for ${chatTitle}`}
+                                aria-haspopup="menu"
+                                aria-expanded={openMenuId === chat.session_id}
+                                onClick={(e) => toggleMenu(e, chat.session_id)}
+                                icon={<MoreVertical size={16} />}
+                              />
+
+                              {/* Dropdown */}
+                              {openMenuId === chat.session_id && (
+                                <div
+                                  role="menu"
+                                  style={{
+                                    position: 'absolute',
+                                    right: 0,
+                                    top: '100%',
+                                    marginTop: '4px',
+                                    backgroundColor: 'var(--color-surface)',
+                                    borderRadius: 'var(--radius-md)',
+                                    boxShadow: 'var(--shadow-md)',
+                                    minWidth: '170px',
+                                    zIndex: 100,
+                                    overflow: 'hidden',
+                                    border: '1px solid var(--color-border)',
+                                  }}
+                                >
+                                  <button
+                                    type="button"
+                                    role="menuitem"
+                                    onClick={(e) => handleGenerateQuiz(e, chat)}
+                                    style={{
+                                      ...buttonReset,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      width: '100%',
+                                      padding: '10px 12px',
+                                      color: 'var(--color-text-primary)',
+                                      fontFamily: 'var(--font-body)',
+                                      fontSize: 'var(--font-size-body-sm)',
+                                      transition: 'background-color var(--duration-base) var(--ease-standard)',
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)')}
+                                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                  >
+                                    <Wand2 size={16} style={{ marginRight: '8px' }} />
+                                    Generate Quiz
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    role="menuitem"
+                                    onClick={(e) => handleDeleteClick(e, chat)}
+                                    style={{
+                                      ...buttonReset,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      width: '100%',
+                                      padding: '10px 12px',
+                                      color: 'var(--color-danger)',
+                                      fontFamily: 'var(--font-body)',
+                                      fontSize: 'var(--font-size-body-sm)',
+                                      borderTop: '1px solid var(--color-border)',
+                                      transition: 'background-color var(--duration-base) var(--ease-standard)',
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-danger-bg)')}
+                                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                  >
+                                    <Trash2 size={16} style={{ marginRight: '8px' }} />
+                                    Delete
+                                  </button>
+                                </div>
+                              )}
                             </div>
-                          </div>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                          </li>
+                        );
+                      })}
+                    </ul>
                   )}
                 </div>
               )}

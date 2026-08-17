@@ -6,9 +6,12 @@ const TONES = {
   success: { bg: 'var(--color-success-bg)', color: 'var(--color-success)' },
   danger: { bg: 'var(--color-danger-bg)', color: 'var(--color-danger)' },
   warning: { bg: 'var(--color-warning-bg)', color: 'var(--color-warning)' },
+  // Gamification-only tone (badges, streak/milestone chips) — mirrors the
+  // accent ramp reserved for celebration moments, see index.css.
+  accent: { bg: 'var(--color-accent-100)', color: 'var(--color-accent-700)' },
 };
 
-export default function Badge({ tone = 'neutral', icon = null, style, children }) {
+export default function Badge({ tone = 'neutral', icon = null, style, children, ...rest }) {
   const t = TONES[tone] || TONES.neutral;
   return (
     <span
@@ -26,6 +29,7 @@ export default function Badge({ tone = 'neutral', icon = null, style, children }
         whiteSpace: 'nowrap',
         ...style,
       }}
+      {...rest}
     >
       {icon}
       {children}

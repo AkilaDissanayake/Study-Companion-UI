@@ -370,3 +370,31 @@ export async function getQuizById(quizId) {
 export async function deleteQuiz(quizId) {
   return request(`${API_BASE_URL}/quizzes/${quizId}`, { method: 'DELETE' });
 }
+
+// ==========================================
+// STATS API (motivational/gamification layer)
+// ==========================================
+
+/**
+ * Fetches derived streak/quiz/chat/file stats plus any newly-unlocked
+ * streak milestones or badges to celebrate.
+ * @returns {Promise<{current_streak: number, longest_streak: number, studied_today: boolean, quiz_count: number, chat_count: number, file_count: number, badges: Array, newly_unlocked: {streaks: number[], badges: string[]}}>}
+ */
+export async function getStatsSummary() {
+  const json = await request(`${API_BASE_URL}/stats/summary`, { method: 'GET' });
+  return json.data ?? json;
+}
+
+/**
+ * Marks a streak/badge milestone as seen so it doesn't celebrate again.
+ * Call only when the celebration UI actually renders and is dismissed.
+ * @param {'streak'|'badge'} type
+ * @param {string|number} id
+ */
+export async function ackMilestone(type, id) {
+  return request(`${API_BASE_URL}/stats/ack`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify({ type, id: String(id) }),
+  });
+}

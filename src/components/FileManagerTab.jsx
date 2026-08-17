@@ -2,17 +2,43 @@
  * @file FileManagerTab.jsx
  * @description Unified tab for uploading files, creating subjects, and viewing documents.
  */
-import React, { useState } from 'react';
-import { Search, Folder, FolderOpen, FileText, X, ChevronDown, ChevronRight, RefreshCw, CheckCircle2, XCircle } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Search, Folder, FolderOpen, FileText, X, ChevronDown, ChevronRight, RefreshCw, CheckCircle2, XCircle, Upload, FolderSearch } from 'lucide-react';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import IconButton from './ui/IconButton';
 import Modal from './ui/Modal';
+import EmptyState from './ui/EmptyState';
 import { Input, Select } from './ui/Input';
+
+const buttonReset = { all: 'unset', cursor: 'pointer', boxSizing: 'border-box' };
+
+/**
+ * Animated disclosure panel for a folder's file list (grid-template-rows
+ * 0fr -> 1fr — the one CSS-only way to transition to/from an intrinsic
+ * height; see .folder-body in index.css). Sets the native `inert` property
+ * imperatively (rather than as a JSX prop, for broad React-version
+ * compatibility) so buttons inside a collapsed panel are removed from the
+ * tab order and AT tree instead of sitting there as invisible, focusable
+ * "phantom" controls — otherwise the CSS-only collapse would silently
+ * reopen the exact keyboard trap this app's accessibility pass closed.
+ */
+function FolderPanel({ isExpanded, children }) {
+  const panelRef = useRef(null);
+  useEffect(() => {
+    if (panelRef.current) panelRef.current.inert = !isExpanded;
+  }, [isExpanded]);
+
+  return (
+    <div ref={panelRef} className={`folder-body${isExpanded ? ' expanded' : ''}`} aria-hidden={!isExpanded}>
+      {children}
+    </div>
+  );
+}
 
 export default function FileManagerTab({
   isAddingSubject, selectedSubject, handleSubjectChange, subjects,
-  newSubject, setNewSubject, setSelectedFiles, resetUploadState,
+  newSubject, setNewSubject, selectedFiles, setSelectedFiles, resetUploadState,
   handleFileUpload, uploadState, uploadProgress, uploadError, uploadedFolder,
   searchQuery, setSearchQuery, isLoadingFiles, uploadedFiles,
   expandedFolders, setExpandedFolders, handleDownload, initiateDelete, fetchUserFiles,
@@ -96,12 +122,52 @@ export default function FileManagerTab({
                 <label style={{ fontWeight: 600, fontSize: 'var(--font-size-body-sm)', display: 'block', marginBottom: 'var(--space-2)' }}>
                   Select Files
                 </label>
-                <input
-                  type="file"
-                  multiple
-                  onChange={(e) => { setSelectedFiles(e.target.files); resetUploadState(); }}
-                  style={{ width: '100%', padding: '6px 0', margin: 0, border: 'none', background: 'none', color: 'var(--color-text-primary)' }}
-                />
+                {/* Styled to match the rest of the design system — the native
+                    <input type="file"> stays functionally in place (still
+                    focusable/keyboard-operable via the wrapping <label>) but
+                    is visually hidden via the .visually-hidden clip technique,
+                    not display:none, so it keeps its accessibility tree presence. */}
+                <label
+                  className="file-drop-label"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 'var(--space-2)',
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px dashed var(--color-border-strong)',
+                    background: 'var(--color-surface)',
+                    color: 'var(--color-text-secondary)',
+                    fontSize: 'var(--font-size-body-sm)',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    boxSizing: 'border-box',
+                    transition: `border-color var(--duration-base) var(--ease-standard), background-color var(--duration-base) var(--ease-standard)`,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--color-primary-500)';
+                    e.currentTarget.style.background = 'var(--color-surface-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--color-border-strong)';
+                    e.currentTarget.style.background = 'var(--color-surface)';
+                  }}
+                >
+                  <Upload size={16} style={{ flexShrink: 0 }} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {selectedFiles && selectedFiles.length > 0
+                      ? `${selectedFiles.length} file${selectedFiles.length !== 1 ? 's' : ''} selected`
+                      : 'Choose files…'}
+                  </span>
+                  <input
+                    type="file"
+                    multiple
+                    onChange={(e) => { setSelectedFiles(e.target.files); resetUploadState(); }}
+                    className="visually-hidden"
+                  />
+                </label>
             </div>
 
             <Button onClick={handleFileUpload} disabled={uploadState === 'uploading'} isLoading={uploadState === 'uploading'}>
@@ -110,6 +176,9 @@ export default function FileManagerTab({
         </div>
 
         {uploadState === 'uploading' && (
+          // Progress bar — same intentional pattern as the quiz-question
+          // progress bar (see QuizzesTab.jsx): a visible, shrinking amount of
+          // remaining work reduces anxiety during the wait (Zeigarnik effect).
           <div style={{ marginTop: 'var(--space-4)' }}>
             <div
               style={{
@@ -203,6 +272,12 @@ export default function FileManagerTab({
 
         {isLoadingFiles ? (
           <p style={{ color: 'var(--color-text-secondary)' }}>Loading your files...</p>
+        ) : uploadedFiles.length === 0 ? (
+          <EmptyState
+            icon={<FolderSearch size={22} />}
+            title="No files yet"
+            description="Upload a document above to get started — the AI tutor can reference it directly in chat."
+          />
         ) : (
           <div>
             {Object.entries(groupedFiles).map(([subject, files]) => {
@@ -212,46 +287,56 @@ export default function FileManagerTab({
               return (
                 <div key={subject} style={{ marginBottom: 'var(--space-3)' }}>
                   <div
-                      onClick={() => setExpandedFolders(prev => ({...prev, [subject]: !prev[subject]}))}
                       style={{
                           backgroundColor: 'var(--color-surface-hover)',
-                          padding: 'var(--space-3)',
                           borderRadius: 'var(--radius-md)',
-                          cursor: 'pointer',
                           display: 'flex',
-                          justifyContent: 'space-between',
                           alignItems: 'center',
-                          fontWeight: 600
                       }}
                   >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                          {isExpanded
-                            ? <FolderOpen size={18} color="var(--color-primary-500)" />
-                            : <Folder size={18} color="var(--color-primary-500)" />}
-                          <span>{subject === 'root' ? 'General' : subject}</span>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setExpandedFolders(prev => ({...prev, [subject]: !prev[subject]}))}
+                        aria-expanded={isExpanded}
+                        style={{
+                            ...buttonReset,
+                            flex: 1,
+                            minWidth: 0,
+                            padding: 'var(--space-3)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            fontWeight: 600,
+                            fontFamily: 'var(--font-body)',
+                            color: 'var(--color-text-primary)',
+                        }}
+                      >
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                              {isExpanded
+                                ? <FolderOpen size={18} color="var(--color-primary-500)" />
+                                : <Folder size={18} color="var(--color-primary-500)" />}
+                              <span>{subject === 'root' ? 'General' : subject}</span>
+                          </span>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-                          {subject !== 'root' && (
-                              <Button
-                                variant="danger-secondary"
-                                size="sm"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    initiateDelete(null, subject);
-                                }}
-                              >
-                                Delete Subject
-                              </Button>
-                          )}
                           <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', color: 'var(--color-text-secondary)', fontWeight: 500, fontSize: 'var(--font-size-body-sm)' }}>
                             {files.length} file{files.length !== 1 && 's'}
                             {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                           </span>
-                      </div>
+                      </button>
+
+                      {subject !== 'root' && (
+                          <Button
+                            variant="danger-secondary"
+                            size="sm"
+                            onClick={() => initiateDelete(null, subject)}
+                            style={{ marginRight: 'var(--space-3)', flexShrink: 0 }}
+                          >
+                            Delete Subject
+                          </Button>
+                      )}
                   </div>
 
-                  {isExpanded && (
+                  <FolderPanel isExpanded={isExpanded}>
                     <ul style={{ listStyleType: 'none', padding: 'var(--space-2) var(--space-3)', margin: 0, border: '1px solid var(--color-border)', borderTop: 'none', borderRadius: '0 0 var(--radius-md) var(--radius-md)' }}>
                       {files.length === 0 ? (
                           <li style={{ padding: 'var(--space-2) 0', color: 'var(--color-text-tertiary)', fontStyle: 'italic' }}>No files in this folder.</li>
@@ -259,16 +344,27 @@ export default function FileManagerTab({
                           files.map((file, index) => (
                             <li key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'var(--space-2) 0', borderBottom: index < files.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
 
-                              <div
+                              <button
+                                type="button"
                                 onClick={() => openPreview(file.filename, file.subject)}
-                                style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', overflow: 'hidden', marginRight: 'var(--space-4)', cursor: 'pointer', flex: 1 }}
+                                style={{
+                                  ...buttonReset,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 'var(--space-2)',
+                                  overflow: 'hidden',
+                                  marginRight: 'var(--space-4)',
+                                  flex: 1,
+                                  minWidth: 0,
+                                  fontFamily: 'var(--font-body)',
+                                }}
                                 title="Click to view file"
                               >
                                 <FileText size={16} color="var(--color-primary-500)" style={{ flexShrink: 0 }} />
                                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--color-text-primary)' }}>
                                   {file.filename}
                                 </span>
-                              </div>
+                              </button>
 
                               <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
                                   <Button variant="secondary" size="sm" onClick={() => handleDownload(file.filename, file.subject)}>
@@ -282,7 +378,7 @@ export default function FileManagerTab({
                           ))
                       )}
                     </ul>
-                  )}
+                  </FolderPanel>
                 </div>
               );
             })}

@@ -9,7 +9,7 @@ export default function Avatar({ name, size = 40, style, ...rest }) {
         height: size,
         borderRadius: 'var(--radius-full)',
         background: 'var(--color-primary-500)',
-        color: '#ffffff',
+        color: 'var(--color-on-primary)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

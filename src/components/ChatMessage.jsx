@@ -86,7 +86,7 @@ export default function ChatMessage({ role, text, isError, currentSubject = "Gen
       <div style={{
         maxWidth: '85%', padding: '16px 20px', borderRadius: 'var(--radius-lg)',
         backgroundColor: isBot ? (isError ? 'var(--color-danger-bg)' : 'var(--color-surface)') : 'var(--color-primary-500)',
-        color: isBot ? (isError ? 'var(--color-danger)' : 'var(--color-text-primary)') : '#ffffff',
+        color: isBot ? (isError ? 'var(--color-danger)' : 'var(--color-text-primary)') : 'var(--color-on-primary)',
         border: isBot ? (isError ? '1px solid var(--color-danger)' : '1px solid var(--color-border)') : 'none',
         borderBottomLeftRadius: isBot ? '0' : 'var(--radius-lg)',
         borderBottomRightRadius: isBot ? 'var(--radius-lg)' : '0',
@@ -158,7 +158,7 @@ export default function ChatMessage({ role, text, isError, currentSubject = "Gen
                             borderRadius: 'var(--radius-md)',
                             boxShadow: 'var(--shadow-sm)',
                             border: '1px solid var(--color-border)',
-                            backgroundColor: '#ffffff'
+                            backgroundColor: 'var(--color-on-primary)' /* generated charts often bake in a white background; keep it consistent regardless of theme */
                           }}
                           loading="lazy"
                           onError={(e) => console.error("Failed to load image in DOM:", src)}

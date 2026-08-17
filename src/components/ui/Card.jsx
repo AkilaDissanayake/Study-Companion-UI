@@ -1,8 +1,16 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 
-export default function Card({ hoverable = false, padding = 'var(--space-6)', style, children, ...rest }) {
+/**
+ * `as` lets a Card render as a real interactive element (e.g. `as="button"`)
+ * instead of a `<div>`, so onClick usages get native keyboard/focus support
+ * for free instead of needing hand-rolled role/tabIndex/onKeyDown.
+ * Forwards its ref to the underlying element so callers can attach an
+ * IntersectionObserver (see the .reveal usages in Landing/Overview/Quizzes).
+ */
+const Card = forwardRef(function Card({ as: Component = 'div', hoverable = false, padding = 'var(--space-6)', style, children, ...rest }, ref) {
   return (
-    <div
+    <Component
+      ref={ref}
       style={{
         background: 'var(--color-surface)',
         border: '1px solid var(--color-border)',
@@ -32,6 +40,8 @@ export default function Card({ hoverable = false, padding = 'var(--space-6)', st
       {...rest}
     >
       {children}
-    </div>
+    </Component>
   );
-}
+});
+
+export default Card;

@@ -38,9 +38,26 @@
   --color-info: var(--color-primary-500);
   --color-info-bg: var(--color-primary-50);
 
+  /* ---- Color: accent (warm gold — reserved exclusively for gamification/
+     celebration moments: streaks, badges, milestones. Never used for primary
+     actions, nav, or links, so it stays a special-occasion signal rather
+     than diluting the calm indigo baseline.) ---- */
+  --color-accent-50: #FFF7E6;
+  --color-accent-100: #FFECC0;
+  --color-accent-200: #FFDD8A;
+  --color-accent-500: #E8A33D;
+  --color-accent-600: #C9832A;
+  --color-accent-700: #9C6317;
+  --color-on-accent: #2B1B02;
+
+  /* ---- Color: on-fill text (centralizes what used to be scattered
+     hardcoded #fff/white across Button, Avatar, Topbar, ChatTab, etc.) ---- */
+  --color-on-primary: #FFFFFF;
+
   /* ---- Typography ---- */
   --font-body: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   --font-display: 'Lexend', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --font-size-display-lg: 56px;
   --font-size-display: 40px;
   --font-size-h1: 28px;
   --font-size-h2: 22px;
@@ -48,8 +65,10 @@
   --font-size-body: 15px;
   --font-size-body-sm: 13px;
   --font-size-caption: 12px;
+  --font-size-stat: 34px; /* dedicated "achievement" voice for stat/streak numbers */
   --line-height-heading: 1.2;
   --line-height-body: 1.6;
+  --letter-spacing-tight: -0.02em;
 
   /* ---- Spacing (4px base) ---- */
   --space-1: 4px;
@@ -70,17 +89,32 @@
   --radius-xl: 20px;
   --radius-full: 999px;
 
+  /* ---- Radius: celebration-only (kept distinct from the standard scale
+     so it stays a deliberate reward signal, e.g. the celebration modal) ---- */
+  --radius-2xl: 28px;
+
   /* ---- Shadow (border-first elevation; shadows mainly for overlays) ---- */
   --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
   --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
   --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.10);
   --shadow-lg: 0 16px 48px rgba(15, 23, 42, 0.16);
+  --shadow-glow-accent: 0 0 0 4px rgba(232, 163, 61, 0.18), 0 8px 24px rgba(232, 163, 61, 0.35);
 
   /* ---- Motion ---- */
   --duration-fast: 120ms;
   --duration-base: 200ms;
   --duration-slow: 320ms;
+  --duration-celebrate: 600ms;
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  /* Deliberately different from --ease-standard: bounce/overshoot is reserved
+     for reward moments (celebration modal) so functional UI motion elsewhere
+     stays calm and linear, never noisy. */
+  --ease-celebrate: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ---- Focus ring (was entirely missing app-wide) ---- */
+  --focus-ring-color: var(--color-primary-500);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
 }
 
 [data-theme="dark"] {
@@ -99,6 +133,16 @@
   /* --color-sidebar-text-muted intentionally NOT overridden here — see :root definition */
   --color-sidebar-border: rgba(255, 255, 255, 0.06);
 
+  /* --color-primary-50/100/200 were previously left un-overridden here,
+     so anything using them (OptionCard's selected state, quiz answer
+     selection, chat code blocks) stayed pinned to their light-mode
+     near-white hex values in dark mode — light text on a near-white card
+     is unreadable. Translucent tints of the dark-mode primary-500, mirroring
+     how --color-success/danger/warning-bg are already handled below. */
+  --color-primary-50: rgba(100, 120, 229, 0.14);
+  --color-primary-100: rgba(100, 120, 229, 0.22);
+  --color-primary-200: rgba(100, 120, 229, 0.34);
+
   --color-primary-500: #6478E5;
   --color-primary-600: #7E90EA;
   --color-primary-700: #B9C5F7;
@@ -110,10 +154,16 @@
   --color-warning: #E0A34E;
   --color-warning-bg: rgba(224, 163, 78, 0.12);
 
+  /* Brighter, mirroring how --color-primary-500 brightens for dark surfaces */
+  --color-accent-500: #F0B65A;
+  --color-accent-600: #D99A3E;
+  --color-on-accent: #241804;
+
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.24);
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.32);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.40);
   --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.48);
+  --shadow-glow-accent: 0 0 0 4px rgba(240, 182, 90, 0.24), 0 8px 24px rgba(240, 182, 90, 0.48);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -122,6 +172,15 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Visible keyboard focus indicator — applies app-wide to every interactive
+   element by default; individual components should NOT re-add outline:none
+   without providing an equivalent replacement. */
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: var(--radius-sm);
 }
 
 body {
@@ -136,10 +195,11 @@ body {
 h1, h2, h3 {
   font-family: var(--font-display);
   line-height: var(--line-height-heading);
+  letter-spacing: var(--letter-spacing-tight);
   margin: 0;
 }
 
-h1 { font-size: var(--font-size-h1); font-weight: 650; }
+h1 { font-size: var(--font-size-h1); font-weight: 700; }
 h2 { font-size: var(--font-size-h2); font-weight: 600; }
 h3 { font-size: var(--font-size-h3); font-weight: 600; }
 
@@ -300,6 +360,7 @@ p {
   display: flex;
   width: 100vw;
   height: 100vh;
+  height: 100dvh; /* keeps the chat input visible above an on-screen mobile keyboard */
 }
 
 /* Sidebar & Collapse Animations */
@@ -317,6 +378,149 @@ p {
 /* The state applied when isCollapsed is true */
 .sidebar.collapsed {
   width: 68px; /* Shrinks the background and container */
+}
+
+/* Hamburger trigger in Topbar — only relevant once the sidebar becomes an
+   off-canvas drawer below 768px; hidden otherwise regardless of JS state. */
+.mobile-menu-trigger {
+  display: none;
+}
+
+.sidebar-scrim {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-menu-trigger {
+    display: flex;
+  }
+
+  .sidebar,
+  .sidebar.collapsed {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 260px;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 1200;
+    transform: translateX(-100%);
+    transition: transform var(--duration-slow) var(--ease-standard);
+  }
+
+  .sidebar.mobile-open,
+  .sidebar.collapsed.mobile-open {
+    transform: translateX(0);
+    width: 260px; /* collapsed icon-rail width doesn't apply to the mobile drawer */
+  }
+
+  .sidebar-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 17, 21, 0.5);
+    z-index: 1100;
+    animation: fadeIn var(--duration-base) var(--ease-standard);
+  }
+}
+
+/* Small phone: stack anything that assumes a wide row */
+@media (max-width: 480px) {
+  .quiz-footer-actions {
+    flex-direction: column-reverse;
+  }
+  .quiz-footer-actions > * {
+    width: 100%;
+  }
+  .landing-hero h1 {
+    font-size: var(--font-size-display) !important;
+  }
+}
+
+/* Scroll/mount reveal utility — shared by Landing's feature grid, Overview's
+   stat tiles, and the Quizzes list. Opacity/transform only (never
+   visibility/display), so content stays in the accessibility tree the whole
+   time; useInView() short-circuits to already-visible under reduced motion. */
+.reveal {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity var(--duration-slow) var(--ease-standard),
+    transform var(--duration-slow) var(--ease-standard);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Auth card entrance (Login/Signup/Setup/ForgotPassword/ResetPassword/
+   VerifyEmail all share the .card class) — mount-triggered, not scroll, so a
+   plain CSS animation is enough; no IntersectionObserver needed since the
+   card is always in view. */
+@keyframes cardEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.card {
+  animation: cardEnter var(--duration-slow) var(--ease-standard);
+}
+
+/* New chat messages fade/rise in as they arrive; history loaded on chat
+   open renders in its final state immediately (see ChatTab.jsx's `fresh`
+   flag) so opening an old chat never re-plays every message's entrance. */
+@keyframes messageEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.message-enter {
+  animation: messageEnter var(--duration-slow) var(--ease-standard);
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-6);
+  margin-top: var(--space-8);
+}
+
+/* Animated folder expand/collapse (FileManagerTab) — grid-template-rows 0fr
+   -> 1fr is the one CSS-only way to transition from/to an intrinsic height. */
+.folder-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--duration-base) var(--ease-standard);
+}
+
+.folder-body.expanded {
+  grid-template-rows: 1fr;
+}
+
+.folder-body > ul {
+  overflow: hidden;
+}
+
+/* Visually hides an element while keeping it in the accessibility tree and
+   keyboard-focusable — used for the native <input type="file"> wrapped by
+   FileManagerTab's styled label, instead of display:none which would also
+   remove it from the tab order. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.file-drop-label:focus-within {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .sidebar h2 {
@@ -367,22 +571,6 @@ p {
   box-sizing: border-box;
 }
 
-/* Google-style Avatar */
-.avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-full);
-  background-color: var(--color-primary-500);
-  color: white;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 18px;
-  font-family: var(--font-display);
-  font-weight: 600;
-  cursor: pointer;
-}
-
 /* Popup Overlay */
 .popup-overlay {
   position: fixed;
@@ -397,7 +585,7 @@ p {
 
 .popup-card {
   background-color: var(--color-success);
-  color: white;
+  color: var(--color-on-primary);
   padding: var(--space-5) var(--space-8);
   border-radius: var(--radius-lg);
   font-size: 1.2rem;
@@ -472,4 +660,12 @@ p {
 @keyframes toastOut {
   from { opacity: 1; transform: translateX(0); }
   to { opacity: 0; transform: translateX(20px); }
+}
+
+/* Reward-moment-only entrance (see CelebrationModal.jsx) — the overshoot
+   comes from --ease-celebrate, kept distinct from every other animation's
+   --ease-standard so bounce reads as a deliberate, special-occasion signal. */
+@keyframes celebrationPop {
+  from { opacity: 0; transform: scale(0.5); }
+  to { opacity: 1; transform: scale(1); }
 }

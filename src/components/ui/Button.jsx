@@ -4,7 +4,7 @@ const VARIANT_STYLES = {
   primary: {
     background: 'var(--color-primary-500)',
     hoverBackground: 'var(--color-primary-600)',
-    color: '#ffffff',
+    color: 'var(--color-on-primary)',
     border: '1px solid transparent',
   },
   secondary: {
@@ -22,7 +22,7 @@ const VARIANT_STYLES = {
   danger: {
     background: 'var(--color-danger)',
     hoverBackground: 'var(--color-danger)',
-    color: '#ffffff',
+    color: 'var(--color-on-primary)',
     border: '1px solid transparent',
   },
   'danger-secondary': {

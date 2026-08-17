@@ -12,7 +12,6 @@ const fieldStyle = ({ iconLeft, style }) => ({
   color: 'var(--color-text-primary)',
   boxSizing: 'border-box',
   transition: `border-color var(--duration-base) var(--ease-standard)`,
-  outline: 'none',
   ...style,
 });
 
