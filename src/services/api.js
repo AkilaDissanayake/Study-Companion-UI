@@ -398,3 +398,53 @@ export async function ackMilestone(type, id) {
     body: JSON.stringify({ type, id: String(id) }),
   });
 }
+
+// ==========================================
+// FLASHCARDS API (spaced repetition — SM-2)
+// ==========================================
+
+/**
+ * Generates an AI flashcard deck from an already-uploaded file.
+ * @param {string} filename
+ * @param {string} [subject]
+ */
+export async function generateFlashcards(filename, subject = 'root') {
+  return request(`${API_BASE_URL}/flashcards/generate`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify({ filename, subject }),
+  });
+}
+
+/** Fetches every flashcard currently due for review, oldest-due-first. */
+export async function getDueFlashcards() {
+  return request(`${API_BASE_URL}/flashcards/due`, { method: 'GET' });
+}
+
+/**
+ * Submits an SM-2 review rating for one card.
+ * @param {string} cardId
+ * @param {'again'|'hard'|'good'|'easy'} rating
+ */
+export async function submitFlashcardReview(cardId, rating) {
+  return request(`${API_BASE_URL}/flashcards/${cardId}/review`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify({ rating }),
+  });
+}
+
+/** Fetches every flashcard (management/decks view — not just due ones). */
+export async function getAllFlashcards() {
+  return request(`${API_BASE_URL}/flashcards`, { method: 'GET' });
+}
+
+/** Deletes a single flashcard. */
+export async function deleteFlashcard(cardId) {
+  return request(`${API_BASE_URL}/flashcards/${cardId}`, { method: 'DELETE' });
+}
+
+/** Deletes an entire generated deck at once (a filename or quiz id). */
+export async function deleteFlashcardDeck(sourceRef) {
+  return request(`${API_BASE_URL}/flashcards/deck?source_ref=${encodeURIComponent(sourceRef)}`, { method: 'DELETE' });
+}

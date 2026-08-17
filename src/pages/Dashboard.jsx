@@ -15,6 +15,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import ChatTab from '../components/ChatTab';
 import QuizzesTab from '../components/QuizzesTab';
 import OverviewTab from '../components/OverviewTab';
+import FlashcardsTab from '../components/FlashcardsTab';
 import { useFileManager } from '../hooks/useFileManager';
 import { useSettings } from '../hooks/useSettings';
 import { useAuth } from '../context/AuthContext';
@@ -23,6 +24,7 @@ import * as api from '../services/api';
 const TAB_TITLES = {
   overview: 'Overview',
   quizzes: 'My Quizzes',
+  flashcards: 'Flashcards',
   chat: 'AI Tutor',
   files: 'My Files',
   settings: 'Settings',
@@ -80,9 +82,10 @@ export default function Dashboard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
-  // Refresh file list and subjects when navigating to the files tab
+  // Refresh file list and subjects when navigating to the files tab, or to
+  // flashcards (its "generate from a file" picker needs the same list).
   useEffect(() => {
-    if (userId && activeTab === 'files') {
+    if (userId && (activeTab === 'files' || activeTab === 'flashcards')) {
       fileManager.fetchSubjects();
       fileManager.fetchUserFiles();
     }
@@ -143,6 +146,10 @@ export default function Dashboard() {
               activeQuizId={activeQuizId}
               setActiveQuizId={setActiveQuizId}
             />
+          )}
+
+          {activeTab === 'flashcards' && (
+            <FlashcardsTab uploadedFiles={fileManager.uploadedFiles} />
           )}
 
           {activeTab === 'chat' && (

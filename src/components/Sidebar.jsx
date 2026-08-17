@@ -13,6 +13,7 @@ import {
   ClipboardList,
   MessageSquare,
   FolderOpen,
+  Layers,
   Settings as SettingsIcon,
   SquarePen,
   MoreVertical,
@@ -20,7 +21,7 @@ import {
   Trash2,
   Search,
 } from 'lucide-react';
-import { getSidebarChats, deleteChatSession, generateChatQuiz } from '../services/api';
+import { getSidebarChats, deleteChatSession, generateChatQuiz, getDueFlashcards } from '../services/api';
 import { useNotify } from '../context/NotificationContext';
 import ConfirmDialog from './ConfirmDialog';
 import IconButton from './ui/IconButton';
@@ -29,6 +30,7 @@ import { Input } from './ui/Input';
 const NAV_ITEMS = [
   { tab: 'overview', label: 'Overview', icon: LayoutDashboard },
   { tab: 'quizzes', label: 'My Quizzes', icon: ClipboardList },
+  { tab: 'flashcards', label: 'Flashcards', icon: Layers },
   { tab: 'chat', label: 'AI Tutor', icon: MessageSquare },
   { tab: 'files', label: 'My Files', icon: FolderOpen },
   { tab: 'settings', label: 'Settings', icon: SettingsIcon },
@@ -55,6 +57,22 @@ export default function Sidebar({
   const notify = useNotify();
   const [chatHistory, setChatHistory] = useState([]);
   const [chatSearchQuery, setChatSearchQuery] = useState('');
+
+  // Due-flashcard count badge — fetched once on mount, same pattern as
+  // Topbar's streak chip. Silent on failure: a glanceable nudge, not a
+  // critical path.
+  const [dueFlashcardCount, setDueFlashcardCount] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    getDueFlashcards()
+      .then((res) => {
+        if (!cancelled) setDueFlashcardCount((res.data || []).length);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Delete confirmation
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -221,7 +239,33 @@ export default function Sidebar({
                   onClick={() => handleNavSelect(tab)}
                 >
                   <Icon size={18} style={{ flexShrink: 0 }} />
-                  {!isCollapsed && <span>{label}</span>}
+                  {!isCollapsed && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', minWidth: 0 }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+                      {tab === 'flashcards' && dueFlashcardCount > 0 && (
+                        <span
+                          title={`${dueFlashcardCount} card${dueFlashcardCount === 1 ? '' : 's'} due for review`}
+                          style={{
+                            flexShrink: 0,
+                            minWidth: 18,
+                            height: 18,
+                            padding: '0 5px',
+                            borderRadius: 'var(--radius-full)',
+                            background: 'var(--color-primary-500)',
+                            color: 'var(--color-on-primary)',
+                            fontSize: 'var(--font-size-caption)',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontVariantNumeric: 'tabular-nums',
+                          }}
+                        >
+                          {dueFlashcardCount}
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </button>
 
                 {tab === 'chat' && activeTab === 'chat' && !isCollapsed && (
