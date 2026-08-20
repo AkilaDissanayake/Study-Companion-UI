@@ -18,6 +18,14 @@ import useInView from '../hooks/useInView';
 // threshold instead of only ever turning green on a perfect score.
 const PASSING_SCORE_RATIO = 0.6;
 
+// Extracted as a pure, exported function purely so the passing-score
+// boundary can be unit-tested directly (see QuizzesTab.test.js) without
+// rendering the whole component.
+export function getScoreTone(score, total) {
+  if (!total) return 'warning';
+  return score / total >= PASSING_SCORE_RATIO ? 'success' : 'warning';
+}
+
 function QuizListItem({ quiz, index, onSelect, onDelete }) {
   const { ref, isInView } = useInView();
   return (
@@ -279,7 +287,7 @@ export default function QuizzesTab({ activeQuizId, setActiveQuizId }) {
         </Button>
 
         {gradingResults && (
-          <Badge tone={gradingResults.score / gradingResults.total >= PASSING_SCORE_RATIO ? 'success' : 'warning'}>
+          <Badge tone={getScoreTone(gradingResults.score, gradingResults.total)}>
             Score: {gradingResults.score} / {gradingResults.total}
           </Badge>
         )}
